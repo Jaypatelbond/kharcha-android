@@ -1,0 +1,36 @@
+# Gradle files
+# Gradle files
+.gradle/
+.gradle/**
+build/
+app/build/
+**/build/
+
+# Local configuration file (sdk.dir, ndk.dir, etc.)
+local.properties
+
+# Log files
+*.log
+*.txt
+!build_output.txt
+
+# Captures
+captures/
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services
+google-services.json
+
+# OSX
+.DS_Store
+
+# Misc
+.gemini/
