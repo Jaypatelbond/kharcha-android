@@ -92,4 +92,45 @@ interface SplitDao {
 
     @androidx.room.Update
     suspend fun updateExpense(expense: SplitExpenseEntity)
+
+    // --- Deletion Queries ---
+    @Query("DELETE FROM split_groups WHERE id = :groupId")
+    suspend fun deleteGroupById(groupId: Long)
+
+    @Query("DELETE FROM split_expenses WHERE groupId = :groupId")
+    suspend fun deleteExpensesByGroupId(groupId: Long)
+
+    @Query("DELETE FROM split_expense_shares WHERE expenseId IN (SELECT id FROM split_expenses WHERE groupId = :groupId)")
+    suspend fun deleteSharesByGroupId(groupId: Long)
+
+    @Query("DELETE FROM split_members WHERE groupId = :groupId")
+    suspend fun deleteMembersByGroupId(groupId: Long)
+
+    @Query("DELETE FROM split_members WHERE id = :memberId")
+    suspend fun deleteMemberById(memberId: Long)
+
+    @Query("DELETE FROM split_expense_shares WHERE memberId = :memberId")
+    suspend fun deleteSharesByMemberId(memberId: Long)
+
+    @Query("DELETE FROM split_expense_shares WHERE expenseId IN (SELECT id FROM split_expenses WHERE paidByMemberId = :memberId)")
+    suspend fun deleteSharesForExpensesPaidByMember(memberId: Long)
+
+    @Query("DELETE FROM split_expenses WHERE paidByMemberId = :memberId")
+    suspend fun deleteExpensesByMemberId(memberId: Long)
+
+    @androidx.room.Transaction
+    suspend fun deleteGroupCascading(groupId: Long) {
+        deleteSharesByGroupId(groupId)
+        deleteExpensesByGroupId(groupId)
+        deleteMembersByGroupId(groupId)
+        deleteGroupById(groupId)
+    }
+
+    @androidx.room.Transaction
+    suspend fun removeMemberCascading(memberId: Long) {
+        deleteSharesByMemberId(memberId)
+        deleteSharesForExpensesPaidByMember(memberId)
+        deleteExpensesByMemberId(memberId)
+        deleteMemberById(memberId)
+    }
 }

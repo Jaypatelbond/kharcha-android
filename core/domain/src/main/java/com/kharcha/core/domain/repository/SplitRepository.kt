@@ -36,4 +36,7 @@ interface SplitRepository {
 
     suspend fun exportGroup(groupId: Long): String
     suspend fun importGroup(json: String): Boolean
+
+    suspend fun deleteGroup(groupId: Long)
+    suspend fun removeMember(memberId: Long)
 }

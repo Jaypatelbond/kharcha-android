@@ -1,6 +1,7 @@
 package com.kharcha.core.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
@@ -33,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kharcha.core.designsystem.theme.DarkCard
 import com.kharcha.core.designsystem.theme.TealPrimary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -45,35 +49,20 @@ fun CalendarWeekView(
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // We maintain a "current week start" state to navigate weeks
-    // But for simplicity and better UX, let's show a month view or a scrollable week view? 
-    // The request image shows a month selector "February - 2023" and arrows. 
-    // Below that are days Mo, Tu, We... and dates.
-    // Let's implement exactly that: A row for Month/Year nav, and a row for the days of that month/week.
-    
-    // Actually, a full month view might take too much space if we show all weeks.
-    // The image shows a single row of dates. This suggests a "Week View" that can change weeks.
-    // Or it could be a horizontal pager of weeks.
-    
-    // Let's start with a state for the currently displayed week's start date.
     var currentWeekStart by remember { mutableStateOf(selectedDate.minusDays(selectedDate.dayOfWeek.value.toLong() - 1)) }
-    
-    // Update current week if selected date changes externally/initially
+
     LaunchedEffect(selectedDate) {
         val startOfWeek = selectedDate.minusDays(selectedDate.dayOfWeek.value.toLong() - 1)
-        // Only update if the selected date is clearly outside the current view? 
-        // Or just always sync? Let's sync if it's far off, but for now simple sync.
         if (startOfWeek != currentWeekStart) {
-             currentWeekStart = startOfWeek
+            currentWeekStart = startOfWeek
         }
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f) // Subtle contrast
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF101726)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -85,78 +74,95 @@ fun CalendarWeekView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { currentWeekStart = currentWeekStart.minusWeeks(1) }) {
+                IconButton(
+                    onClick = { currentWeekStart = currentWeekStart.minusWeeks(1) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0xFF162032), RoundedCornerShape(10.dp))
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                        contentDescription = "Previous Week"
+                        contentDescription = "Previous Week",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                val headerDate = currentWeekStart.plusDays(3) // Mid-week determines the label? Or start? 
-                // Usually the month of the majority of days.
+                val headerDate = currentWeekStart.plusDays(3)
                 Text(
-                    text = headerDate.format(DateTimeFormatter.ofPattern("MMMM - yyyy")),
+                    text = headerDate.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                IconButton(onClick = { currentWeekStart = currentWeekStart.plusWeeks(1) }) {
+                IconButton(
+                    onClick = { currentWeekStart = currentWeekStart.plusWeeks(1) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0xFF162032), RoundedCornerShape(10.dp))
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = "Next Week"
+                        contentDescription = "Next Week",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Days Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround // Better distribution
+                horizontalArrangement = Arrangement.SpaceAround
             ) {
                 val weekDays = (0..6).map { currentWeekStart.plusDays(it.toLong()) }
-                
+
                 weekDays.forEach { date ->
                     val isSelected = date == selectedDate
                     val isToday = date == LocalDate.now()
-                    
+
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .clickable { onDateSelected(date) }
-                            .background(if (isSelected) TealPrimary else Color.Transparent)
-                            .padding(vertical = 8.dp, horizontal = 6.dp) // Reduced padding
+                            .background(
+                                if (isSelected) TealPrimary
+                                else if (isToday) Color(0xFF1E293B)
+                                else Color.Transparent
+                            )
+                            .padding(vertical = 10.dp, horizontal = 8.dp)
                     ) {
                         Text(
-                            text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2),
+                            text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2).uppercase(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
+                            color = if (isSelected) Color(0xFF090D16) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
                         )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         Text(
                             text = date.dayOfMonth.toString(),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) Color(0xFF090D16) else MaterialTheme.colorScheme.onSurface
                         )
-                        
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
                         if (isToday && !isSelected) {
-                            Spacer(modifier = Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
-                                    .size(4.dp)
-                                    .clip(RoundedCornerShape(2.dp))
+                                    .size(5.dp)
+                                    .clip(CircleShape)
                                     .background(TealPrimary)
                             )
                         } else {
-                             Spacer(modifier = Modifier.height(4.dp))
-                             // Invisible spacer to keep alignment
-                             Box(modifier = Modifier.size(4.dp))
+                            Box(modifier = Modifier.size(5.dp))
                         }
                     }
                 }

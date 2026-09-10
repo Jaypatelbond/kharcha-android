@@ -3,9 +3,10 @@ package com.kharcha.tracker.presentation.screens.stats
 import com.kharcha.core.domain.repository.CategoryTotal
 
 enum class TimeRange(val label: String) {
+    MONTH("Monthly"),
+    YEAR("Yearly"),
+    ALL_TIME("All Time"),
     WEEK("Week"),
-    MONTH("Month"),
-    YEAR("Year"),
     FINANCIAL_YEAR("FY")
 }
 

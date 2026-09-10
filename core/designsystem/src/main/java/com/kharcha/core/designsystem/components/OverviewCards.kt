@@ -1,6 +1,7 @@
 package com.kharcha.core.designsystem.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
@@ -34,13 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.kharcha.core.designsystem.theme.ExpenseRed
-import com.kharcha.core.designsystem.theme.ExpenseRedDark
-import com.kharcha.core.designsystem.theme.IncomeGreen
-import com.kharcha.core.designsystem.theme.IncomeGreenDark
-import com.kharcha.core.designsystem.theme.TealDark
-import com.kharcha.core.designsystem.theme.TealPrimary
 import com.kharcha.core.common.util.CurrencyFormatter
+import com.kharcha.core.designsystem.theme.TealPrimary
 
 @Composable
 fun OverviewCards(
@@ -55,42 +50,54 @@ fun OverviewCards(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             OverviewCardItem(
                 title = "Total Balance",
                 amount = balance,
                 icon = Icons.Rounded.AccountBalanceWallet,
-                gradient = Brush.verticalGradient(listOf(TealPrimary, TealDark)),
-                contentColor = Color.White
+                gradient = Brush.linearGradient(
+                    colors = listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF0D9488))
+                ),
+                contentColor = Color.White,
+                accentColor = TealPrimary
             )
         }
         item {
             OverviewCardItem(
-                title = "Total Income",
+                title = "Monthly Income",
                 amount = income,
                 icon = Icons.Rounded.ArrowUpward,
-                gradient = Brush.verticalGradient(listOf(IncomeGreen, IncomeGreenDark)),
-                contentColor = Color.White
+                gradient = Brush.linearGradient(
+                    colors = listOf(Color(0xFF064E3B), Color(0xFF065F46), Color(0xFF047857))
+                ),
+                contentColor = Color.White,
+                accentColor = Color(0xFF34D399)
             )
         }
         item {
             OverviewCardItem(
-                title = "Total Expense",
+                title = "Monthly Expense",
                 amount = expense,
                 icon = Icons.Rounded.ArrowDownward,
-                gradient = Brush.verticalGradient(listOf(ExpenseRed, ExpenseRedDark)),
-                contentColor = Color.White
+                gradient = Brush.linearGradient(
+                    colors = listOf(Color(0xFF4C0519), Color(0xFF881337), Color(0xFF9F1239))
+                ),
+                contentColor = Color.White,
+                accentColor = Color(0xFFFB7185)
             )
         }
         item {
             OverviewCardItem(
-                title = "Total Savings",
+                title = "Net Savings",
                 amount = savings,
                 icon = Icons.Rounded.Savings,
-                gradient = Brush.verticalGradient(listOf(Color(0xFF64FFDA), Color(0xFF1DE9B6))), // Custom Teal
-                contentColor = Color(0xFF004D40), // Dark teal text for contrast on light teal
+                gradient = Brush.linearGradient(
+                    colors = listOf(Color(0xFF312E81), Color(0xFF4338CA), Color(0xFF065F46))
+                ),
+                contentColor = Color.White,
+                accentColor = Color(0xFF38BDF8),
                 progress = savingsProgress
             )
         }
@@ -104,71 +111,70 @@ fun OverviewCardItem(
     icon: ImageVector,
     gradient: Brush,
     contentColor: Color,
+    accentColor: Color,
     progress: Float? = null
 ) {
     Card(
         modifier = Modifier
-            .width(160.dp)
-            .height(180.dp),
+            .width(165.dp)
+            .height(185.dp),
         shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Transparent to show Box gradient
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(brush = gradient)
+                .border(1.dp, Color(0x33CBD5E1), RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(18.dp)
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        tint = contentColor.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
+                        tint = accentColor,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 Column {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.labelMedium,
-                        color = contentColor.copy(alpha = 0.8f)
+                        color = contentColor.copy(alpha = 0.75f)
                     )
-                    
+
                     Spacer(modifier = Modifier.height(4.dp))
-                    
+
                     Text(
                         text = CurrencyFormatter.format(amount),
-                        style = MaterialTheme.typography.headlineSmall, // Increased size
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = contentColor
                     )
                 }
 
                 if (progress != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = contentColor,
-                        trackColor = contentColor.copy(alpha = 0.2f),
+                        color = accentColor,
+                        trackColor = Color.White.copy(alpha = 0.2f),
                     )
                 }
             }

@@ -30,4 +30,10 @@ class GroupsListViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteGroup(groupId: Long) {
+        viewModelScope.launch {
+            repository.deleteGroup(groupId)
+        }
+    }
 }

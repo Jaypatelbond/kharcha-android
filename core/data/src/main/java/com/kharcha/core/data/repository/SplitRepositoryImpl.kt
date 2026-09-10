@@ -331,4 +331,12 @@ class SplitRepositoryImpl @Inject constructor(
             return false
         }
     }
+
+    override suspend fun deleteGroup(groupId: Long) {
+        dao.deleteGroupCascading(groupId)
+    }
+
+    override suspend fun removeMember(memberId: Long) {
+        dao.removeMemberCascading(memberId)
+    }
 }

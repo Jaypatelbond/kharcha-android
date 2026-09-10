@@ -15,11 +15,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class LoanTimeView(val label: String) {
+    MONTHLY("Monthly"),
+    YEARLY("Yearly"),
+    ALL_TIME("All Time")
+}
+
 data class LoansUiState(
     val activeLoans: List<LoanEntity> = emptyList(),
     val totalOutstanding: Double = 0.0,
     val totalMonthlyEmi: Double = 0.0,
-    val cibilScoreEstimate: Int = 750
+    val totalYearlyEmi: Double = 0.0,
+    val totalPrincipal: Double = 0.0,
+    val totalPaid: Double = 0.0,
+    val cibilScoreEstimate: Int = 750,
+    val selectedTimeView: LoanTimeView = LoanTimeView.MONTHLY
 )
 
 @HiltViewModel
@@ -31,7 +41,9 @@ class LoansViewModel @Inject constructor(
     private val _loans = loanDao.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val uiState: StateFlow<LoansUiState> = _loans.combine(MutableStateFlow(Unit)) { loans, _ ->
+    private val _timeView = MutableStateFlow(LoanTimeView.MONTHLY)
+
+    val uiState: StateFlow<LoansUiState> = combine(_loans, _timeView) { loans, timeView ->
         val activeLoans = loans.filter { it.status == "ACTIVE" }
         val loanModels = loans.map {
             Loan(
@@ -51,14 +63,25 @@ class LoansViewModel @Inject constructor(
         
         val totalEmi = analysisUseCase.calculateTotalMonthlyEmi(loanModels)
         val score = analysisUseCase.simulateCibilScore(loanModels)
+        val principal = activeLoans.sumOf { it.principalAmount }
+        val outstanding = activeLoans.sumOf { it.outstandingBalance }
+        val paid = (principal - outstanding).coerceAtLeast(0.0)
 
         LoansUiState(
-            activeLoans = activeLoans, // Keep using activeLoans here properly
-            totalOutstanding = activeLoans.sumOf { it.outstandingBalance },
+            activeLoans = activeLoans,
+            totalOutstanding = outstanding,
             totalMonthlyEmi = totalEmi,
-            cibilScoreEstimate = score
+            totalYearlyEmi = totalEmi * 12.0,
+            totalPrincipal = principal,
+            totalPaid = paid,
+            cibilScoreEstimate = score,
+            selectedTimeView = timeView
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LoansUiState())
+
+    fun setTimeView(view: LoanTimeView) {
+        _timeView.value = view
+    }
 
     fun addLoan(loan: LoanEntity) {
         viewModelScope.launch {

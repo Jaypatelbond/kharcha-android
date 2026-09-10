@@ -129,4 +129,26 @@ class GroupDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteGroup(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                repository.deleteGroup(groupId)
+                onDeleted()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to delete group: ${e.message}") }
+            }
+        }
+    }
+
+    fun removeMember(memberId: Long, onRemoved: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                repository.removeMember(memberId)
+                onRemoved()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Failed to remove member: ${e.message}") }
+            }
+        }
+    }
 }

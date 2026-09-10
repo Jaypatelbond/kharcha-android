@@ -33,7 +33,7 @@ import com.kharcha.core.database.entity.TransactionEntity
         IncomeProfileEntity::class,
         com.kharcha.core.database.entity.BudgetEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -243,6 +243,14 @@ abstract class AppDatabase : RoomDatabase() {
                         `lastUpdated` INTEGER NOT NULL
                     )
                 """)
+            }
+        }
+
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Seed historical home expenses from Excel tracker into existing installations
+                com.kharcha.core.database.util.HomeExpenseSeeder.seed(database)
             }
         }
 

@@ -36,6 +36,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
@@ -157,8 +160,13 @@ fun KharchaAppContent(
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 0.dp
+                                containerColor = Color(0xFF0C121F),
+                                tonalElevation = 0.dp,
+                                modifier = Modifier.border(
+                                    width = 1.dp,
+                                    color = Color(0x33475569),
+                                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                                )
                             ) {
                                 navItems.forEach { item ->
                                     val isSelected = currentRoute == item.route
@@ -186,7 +194,9 @@ fun KharchaAppContent(
                                         colors = NavigationBarItemDefaults.colors(
                                             selectedIconColor = TealPrimary,
                                             selectedTextColor = TealPrimary,
-                                            indicatorColor = TealPrimary.copy(alpha = 0.12f)
+                                            unselectedIconColor = Color(0xFF64748B),
+                                            unselectedTextColor = Color(0xFF64748B),
+                                            indicatorColor = Color(0x2600F5D4)
                                         )
                                     )
                                 }

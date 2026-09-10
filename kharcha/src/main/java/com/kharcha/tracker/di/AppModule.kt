@@ -9,7 +9,7 @@ import com.kharcha.core.database.dao.SmsTransactionDao
 import com.kharcha.core.database.dao.SplitDao
 import com.kharcha.core.database.dao.TransactionDao
 import com.kharcha.core.database.util.CategoryDefaults
-import com.kharcha.core.database.util.TestDataSeeder
+import com.kharcha.core.database.util.HomeExpenseSeeder
 import com.kharcha.core.data.repository.SmsRepositoryImpl
 import com.kharcha.core.data.repository.SplitRepositoryImpl
 import com.kharcha.core.data.repository.TransactionRepositoryImpl
@@ -44,7 +44,8 @@ object AppModule {
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
-                AppDatabase.MIGRATION_8_9
+                AppDatabase.MIGRATION_8_9,
+                AppDatabase.MIGRATION_9_10
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -57,10 +58,8 @@ object AppModule {
                             arrayOf(cat.name, cat.type, cat.iconName, cat.color, if (cat.isDefault) 1 else 0, cat.createdAt)
                         )
                     }
-                    // Seed test data ONLY in debug builds
-                    if (com.kharcha.tracker.BuildConfig.DEBUG) {
-                        TestDataSeeder.seed(db)
-                    }
+                    // Seed historical home expenses from Excel tracker
+                    HomeExpenseSeeder.seed(db)
                 }
             })
             .build()

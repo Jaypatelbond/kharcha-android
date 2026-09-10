@@ -78,6 +78,7 @@ class StatsViewModel @Inject constructor(
         TimeRange.MONTH -> DateUtils.getStartOfMonth() to DateUtils.getEndOfMonth()
         TimeRange.YEAR -> DateUtils.getStartOfYear() to DateUtils.getEndOfDay()
         TimeRange.FINANCIAL_YEAR -> DateUtils.getFinancialYearStart() to DateUtils.getFinancialYearEnd()
+        TimeRange.ALL_TIME -> 0L to Long.MAX_VALUE
     }
 }
 

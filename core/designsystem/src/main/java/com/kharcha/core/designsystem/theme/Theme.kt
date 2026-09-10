@@ -4,8 +4,6 @@ import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -25,7 +23,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = TextPrimaryDark,
     onSurfaceVariant = TextSecondaryDark,
     error = ExpenseRed,
-    outline = DarkCardVariant
+    outline = GlassBorder,
+    outlineVariant = DarkCardVariant
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -40,25 +39,18 @@ private val LightColorScheme = lightColorScheme(
     onSurface = TextPrimaryLight,
     onSurfaceVariant = TextSecondaryLight,
     error = ExpenseRedDark,
-    outline = LightCardVariant
+    outline = GlassBorderLight,
+    outlineVariant = LightCardVariant
 )
 
-@Suppress("DEPRECATION") // statusBarColor is deprecated in API 35
+@Suppress("DEPRECATION")
 @Composable
 fun KharchaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true, // Default to Dark Theme for Sleek Dark Modern experience
+    dynamicColor: Boolean = false, // Keep Kharcha's signature aesthetic on all devices
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S -> {
-            val context = androidx.compose.ui.platform.LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val view = LocalView.current
     if (!view.isInEditMode) {

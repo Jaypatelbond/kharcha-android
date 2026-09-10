@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material3.AlertDialog
@@ -71,6 +73,7 @@ fun GroupsListScreen(
     val groups by viewModel.groups.collectAsStateWithLifecycle()
     val isAdFree by mainViewModel.isAdFree.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var groupToDelete by remember { mutableStateOf<SplitGroup?>(null) }
 
     if (showAddDialog) {
         AddGroupDialog(
@@ -78,6 +81,31 @@ fun GroupsListScreen(
             onConfirm = { name ->
                 viewModel.createGroup(name)
                 showAddDialog = false
+            }
+        )
+    }
+
+    groupToDelete?.let { group ->
+        AlertDialog(
+            onDismissRequest = { groupToDelete = null },
+            title = { Text("Delete Group?") },
+            text = { Text("Are you sure you want to delete \"${group.name}\"? All associated expenses, shares, and members will be permanently deleted.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toDeleteId = group.id
+                        groupToDelete = null
+                        viewModel.deleteGroup(toDeleteId)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { groupToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -152,7 +180,8 @@ fun GroupsListScreen(
                         group = groupWithMembers.group,
                         members = groupWithMembers.members,
                         totalExpense = groupWithMembers.totalExpense,
-                        onClick = { onGroupClick(groupWithMembers.group.id) }
+                        onClick = { onGroupClick(groupWithMembers.group.id) },
+                        onDelete = { groupToDelete = groupWithMembers.group }
                     )
                 }
             }
@@ -165,14 +194,16 @@ fun GroupItem(
     group: SplitGroup,
     members: List<SplitMember>,
     totalExpense: Double,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit = {}
 ) {
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color(0xFF131B2C)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -210,18 +241,32 @@ fun GroupItem(
                     }
                 }
                 
-                if (totalExpense > 0) {
-                     Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Total Spent",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = CurrencyFormatter.format(totalExpense),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TealPrimary
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (totalExpense > 0) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Total Spent",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = CurrencyFormatter.format(totalExpense),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TealPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = "Delete Group",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }

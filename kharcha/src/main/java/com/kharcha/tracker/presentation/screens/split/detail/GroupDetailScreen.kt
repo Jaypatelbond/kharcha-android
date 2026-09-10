@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -83,6 +86,9 @@ fun GroupDetailScreen(
     val isAdFree by mainViewModel.isAdFree.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
     var showAddMemberDialog by remember { mutableStateOf(false) }
+    var showDeleteGroupDialog by remember { mutableStateOf(false) }
+    var showLeaveGroupDialog by remember { mutableStateOf(false) }
+    var memberToRemove by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 2 })
     
@@ -100,6 +106,108 @@ fun GroupDetailScreen(
             onConfirm = { name ->
                 viewModel.addMember(name)
                 showAddMemberDialog = false
+            }
+        )
+    }
+
+    if (showDeleteGroupDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteGroupDialog = false },
+            title = { Text("Delete Group?") },
+            text = { Text("Are you sure you want to delete \"${state.groupWithMembers?.group?.name ?: "this group"}\"? All expenses, shares, and members in this group will be permanently deleted.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteGroupDialog = false
+                        viewModel.deleteGroup {
+                            onNavigateBack()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteGroupDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showLeaveGroupDialog) {
+        val members = state.groupWithMembers?.members ?: emptyList()
+        var selectedMemberId by remember { mutableStateOf(members.firstOrNull()?.id ?: 0L) }
+        AlertDialog(
+            onDismissRequest = { showLeaveGroupDialog = false },
+            title = { Text("Leave Group") },
+            text = {
+                Column {
+                    Text("Select your member profile to leave and remove yourself from this group:")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    members.forEach { member ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedMemberId = member.id }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = (member.id == selectedMemberId),
+                                onClick = { selectedMemberId = member.id }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(member.name, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLeaveGroupDialog = false
+                        if (selectedMemberId != 0L) {
+                            viewModel.removeMember(selectedMemberId) {
+                                onNavigateBack()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Leave Group")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveGroupDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    memberToRemove?.let { (id, name) ->
+        AlertDialog(
+            onDismissRequest = { memberToRemove = null },
+            title = { Text("Remove Member?") },
+            text = { Text("Are you sure you want to remove \"$name\" from this group? Any expenses associated with them will also be removed.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val toRemoveId = id
+                        memberToRemove = null
+                        viewModel.removeMember(toRemoveId)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { memberToRemove = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -181,6 +289,23 @@ fun GroupDetailScreen(
                             onClick = {
                                 showMenu = false
                                 importLauncher.launch("application/json")
+                            }
+                        )
+                        androidx.compose.material3.HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Leave Group (Remove Myself)", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.ExitToApp, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                showLeaveGroupDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete Group", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                showDeleteGroupDialog = true
                             }
                         )
                     }
@@ -268,7 +393,12 @@ fun GroupDetailScreen(
                 ) { page ->
                     when (page) {
                         0 -> ExpensesList(state.expenses)
-                        1 -> BalancesList(state.balances)
+                        1 -> BalancesList(
+                            balances = state.balances,
+                            onRemoveMember = { id, name ->
+                                memberToRemove = id to name
+                            }
+                        )
                     }
                 }
             }
@@ -322,8 +452,9 @@ fun ExpenseItem(expense: SplitExpense) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface // Cleaner look
+            containerColor = Color(0xFF131B2C)
         ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -363,7 +494,10 @@ fun ExpenseItem(expense: SplitExpense) {
 }
 
 @Composable
-fun BalancesList(balances: List<MemberBalance>) {
+fun BalancesList(
+    balances: List<MemberBalance>,
+    onRemoveMember: (Long, String) -> Unit = { _, _ -> }
+) {
     if (balances.isEmpty()) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -396,7 +530,10 @@ fun BalancesList(balances: List<MemberBalance>) {
             modifier = Modifier.fillMaxSize()
         ) {
             items(balances) { balance ->
-                BalanceItem(balance)
+                BalanceItem(
+                    balance = balance,
+                    onRemove = { onRemoveMember(balance.memberId, balance.memberName) }
+                )
             }
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
@@ -404,13 +541,17 @@ fun BalancesList(balances: List<MemberBalance>) {
 }
 
 @Composable
-fun BalanceItem(balance: MemberBalance) {
+fun BalanceItem(
+    balance: MemberBalance,
+    onRemove: () -> Unit = {}
+) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface // Cleaner
+            containerColor = Color(0xFF131B2C)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), // Subtle
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -420,7 +561,10 @@ fun BalanceItem(balance: MemberBalance) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 MemberAvatar(
                     name = balance.memberName,
                     size = 48.dp,
@@ -430,7 +574,9 @@ fun BalanceItem(balance: MemberBalance) {
                 Text(
                     text = balance.memberName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
             
@@ -442,18 +588,32 @@ fun BalanceItem(balance: MemberBalance) {
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
             
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = if (isOwed) "gets back" else if (isDebt) "owes" else "settled",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = color
-                )
-                Text(
-                    text = CurrencyFormatter.format(kotlin.math.abs(balance.balance)),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = if (isOwed) "gets back" else if (isDebt) "owes" else "settled",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = color
+                    )
+                    Text(
+                        text = CurrencyFormatter.format(kotlin.math.abs(balance.balance)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = color
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = "Remove Member",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
