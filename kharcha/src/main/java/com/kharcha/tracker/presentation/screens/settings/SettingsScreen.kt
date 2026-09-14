@@ -21,6 +21,10 @@ import com.kharcha.core.designsystem.components.ManageCollectionsDialog
 import com.kharcha.core.designsystem.components.CollectionItemData
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Password
+import com.kharcha.core.designsystem.components.SetPinDialog
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Gavel
@@ -79,6 +83,10 @@ fun SettingsScreen(
 
     var showAdOfferDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showManageCollectionsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showSetPinDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showChangePinDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val isAppLockEnabled by viewModel.isAppLockEnabled.collectAsStateWithLifecycle()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
     val collections by viewModel.collections.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val adManager = androidx.compose.runtime.remember { com.kharcha.core.common.util.AdManager(context) }
@@ -255,6 +263,103 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Security
+        Text(
+            text = "Security",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("App Lock", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text("Require PIN or fingerprint to unlock", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(
+                    checked = isAppLockEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            showSetPinDialog = true
+                        } else {
+                            viewModel.disableAppLock()
+                        }
+                    },
+                    colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
+
+        if (isAppLockEnabled) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsItem(
+                icon = Icons.Rounded.Password,
+                title = "Change PIN",
+                subtitle = "Update your 4-digit security PIN",
+                onClick = { showChangePinDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Rounded.Fingerprint,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Text("Biometric Unlock", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text("Use fingerprint or face to unlock", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = isBiometricEnabled,
+                        onCheckedChange = { viewModel.setBiometricEnabled(it) },
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Data
         Text(
             text = "Data",
@@ -371,6 +476,28 @@ fun SettingsScreen(
             onCreateCollection = { viewModel.createCollection(it) },
             onRenameCollection = { old, new -> viewModel.renameCollection(old, new) },
             onDeleteCollection = { viewModel.deleteCollection(it) }
+        )
+    }
+
+    if (showSetPinDialog) {
+        SetPinDialog(
+            isChangingPin = false,
+            onDismiss = { showSetPinDialog = false },
+            onPinConfirmed = { pin ->
+                viewModel.enableAppLock(pin)
+                showSetPinDialog = false
+            }
+        )
+    }
+
+    if (showChangePinDialog) {
+        SetPinDialog(
+            isChangingPin = true,
+            onDismiss = { showChangePinDialog = false },
+            onPinConfirmed = { pin ->
+                viewModel.changePin(pin)
+                showChangePinDialog = false
+            }
         )
     }
 }

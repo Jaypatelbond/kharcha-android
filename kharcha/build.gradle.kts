@@ -167,5 +167,9 @@ dependencies {
     // In-App Updates
     implementation(libs.app.update.ktx)
 
+    // Biometric & Fragment
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+
     testImplementation("junit:junit:4.13.2")
 }

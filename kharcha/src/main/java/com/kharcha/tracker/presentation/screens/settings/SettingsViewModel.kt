@@ -56,6 +56,36 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { collectionRepository.deleteCollection(name) }
     }
 
+    val isAppLockEnabled: StateFlow<Boolean> = kharchaPreferences.isAppLockEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val isBiometricEnabled: StateFlow<Boolean> = kharchaPreferences.isBiometricEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun enableAppLock(pin: String) {
+        viewModelScope.launch {
+            kharchaPreferences.enableAppLock(pin, true)
+        }
+    }
+
+    fun disableAppLock() {
+        viewModelScope.launch {
+            kharchaPreferences.disableAppLock()
+        }
+    }
+
+    fun changePin(newPin: String) {
+        viewModelScope.launch {
+            kharchaPreferences.updatePin(newPin)
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            kharchaPreferences.setBiometricEnabled(enabled)
+        }
+    }
+
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 

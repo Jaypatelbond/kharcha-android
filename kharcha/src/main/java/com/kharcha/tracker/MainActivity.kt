@@ -1,7 +1,7 @@
 package com.kharcha.tracker
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -63,7 +63,7 @@ data class BottomNavItem(
 )
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     @Inject
     lateinit var dashboardFeatureApi: DashboardFeatureApi
@@ -124,6 +124,24 @@ fun KharchaAppContent(
 
     val isOnboardingCompleted by viewModel.isOnboardingCompleted.collectAsState(initial = null)
 
+    val isAppLockEnabled by viewModel.isAppLockEnabled.collectAsState()
+    val appLockPinHash by viewModel.appLockPinHash.collectAsState()
+    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    val isAppUnlocked by viewModel.isAppUnlocked.collectAsState()
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                viewModel.onAppBackgrounded()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     if (isOnboardingCompleted == null) {
         // Splash / Loading
         Box(
@@ -155,7 +173,14 @@ fun KharchaAppContent(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                Scaffold(
+                if (isAppLockEnabled && !isAppUnlocked && appLockPinHash.isNotBlank()) {
+                    com.kharcha.tracker.presentation.lock.AppLockScreen(
+                        storedPinHash = appLockPinHash,
+                        isBiometricEnabled = isBiometricEnabled,
+                        onUnlockSuccess = { viewModel.setAppUnlocked(true) }
+                    )
+                } else {
+                    Scaffold(
                     contentWindowInsets = WindowInsets.navigationBars,
                     bottomBar = {
                         if (showBottomBar) {
@@ -232,6 +257,7 @@ fun KharchaAppContent(
                     addTransactionFeatureApi = addTransactionFeatureApi
                         )
                     }
+                }
                 }
             }
         }
