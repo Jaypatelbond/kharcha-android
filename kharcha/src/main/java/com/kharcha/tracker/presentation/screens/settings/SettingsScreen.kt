@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -87,6 +88,13 @@ fun SettingsScreen(
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
     val collections by viewModel.collections.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val versionName = androidx.compose.runtime.remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.3.0"
+        } catch (e: Exception) {
+            "1.3.0"
+        }
+    }
     val adManager = androidx.compose.runtime.remember { com.kharcha.core.common.util.AdManager(context) }
     // Preload ad
     LaunchedEffect(Unit) {
@@ -409,18 +417,41 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // About
+        // About & Updates
         Text(
-            text = "About",
+            text = "About & Updates",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsItem(
+            icon = Icons.Rounded.SystemUpdate,
+            title = "Check for Updates",
+            subtitle = "Version $versionName • Tap to check for updates",
+            onClick = {
+                val activity = context as? android.app.Activity
+                if (activity != null) {
+                    android.widget.Toast.makeText(context, "Checking for updates...", android.widget.Toast.LENGTH_SHORT).show()
+                    com.kharcha.core.common.util.InAppUpdateManager(activity).checkForUpdate(
+                        manual = true,
+                        onLatestVersion = {
+                            android.widget.Toast.makeText(context, "You are using the latest version of Kharcha (v$versionName) 🎉", android.widget.Toast.LENGTH_LONG).show()
+                        },
+                        onFailure = {
+                            com.kharcha.core.common.util.InAppUpdateManager(activity).openPlayStore()
+                        }
+                    )
+                }
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SettingsItem(
             icon = Icons.Rounded.Info,
             title = "Kharcha",
-            subtitle = "Version 1.0.0 • Made with ❤️ in India",
+            subtitle = "Version $versionName • Made with ❤️ in India",
             onClick = {}
         )
         

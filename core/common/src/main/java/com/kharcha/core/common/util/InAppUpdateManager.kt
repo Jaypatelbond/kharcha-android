@@ -1,7 +1,9 @@
 package com.kharcha.core.common.util
 
 import android.app.Activity
+import android.content.Intent
 import android.content.IntentSender
+import android.net.Uri
 import android.util.Log
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
@@ -15,14 +17,7 @@ import com.google.android.play.core.install.model.UpdateAvailability
 /**
  * Handles Google Play In-App Updates.
  *
- * Uses IMMEDIATE update type — when an update is available, a full-screen
- * UI blocks the app until the user updates. This ensures users always
- * run the latest version.
- *
- * Usage:
- *   1. Call [checkForUpdate] in onCreate
- *   2. Call [onResume] in onResume (handles interrupted updates)
- *   3. Call [onDestroy] in onDestroy (cleanup)
+ * Supports both automatic checks on app startup and manual checks from Settings.
  */
 class InAppUpdateManager(private val activity: Activity) {
 
@@ -37,58 +32,75 @@ class InAppUpdateManager(private val activity: Activity) {
     private var installStateListener: InstallStateUpdatedListener? = null
 
     /**
-     * Check for available updates and start Immediate update flow if found.
+     * Check for available updates.
+     * @param manual true when triggered by user tapping "Check for Updates"
+     * @param onLatestVersion callback invoked when user is already on the latest version
+     * @param onFailure callback invoked if the update check fails
      */
-    fun checkForUpdate() {
-        installStateListener = InstallStateUpdatedListener { state ->
-            when (state.installStatus()) {
-                InstallStatus.DOWNLOADED -> {
-                    // For FLEXIBLE type — auto-complete the update
-                    Log.d(TAG, "Update downloaded, completing update...")
-                    appUpdateManager.completeUpdate()
-                }
-                InstallStatus.INSTALLED -> {
-                    Log.d(TAG, "Update installed!")
-                    unregisterListener()
-                }
-                InstallStatus.FAILED -> {
-                    Log.e(TAG, "Update failed with error code: ${state.installErrorCode()}")
-                }
-                else -> {
-                    Log.d(TAG, "Install state: ${state.installStatus()}")
+    fun checkForUpdate(
+        manual: Boolean = false,
+        onLatestVersion: (() -> Unit)? = null,
+        onFailure: ((Exception) -> Unit)? = null
+    ) {
+        if (installStateListener == null) {
+            installStateListener = InstallStateUpdatedListener { state ->
+                when (state.installStatus()) {
+                    InstallStatus.DOWNLOADED -> {
+                        Log.d(TAG, "Update downloaded, completing update...")
+                        appUpdateManager.completeUpdate()
+                    }
+                    InstallStatus.INSTALLED -> {
+                        Log.d(TAG, "Update installed!")
+                        unregisterListener()
+                    }
+                    InstallStatus.FAILED -> {
+                        Log.e(TAG, "Update failed with error code: ${state.installErrorCode()}")
+                    }
+                    else -> {
+                        Log.d(TAG, "Install state: ${state.installStatus()}")
+                    }
                 }
             }
+            appUpdateManager.registerListener(installStateListener!!)
         }
-        appUpdateManager.registerListener(installStateListener!!)
 
         appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
-            handleUpdateCheck(appUpdateInfo)
-        }.addOnFailureListener { e ->
-            Log.e(TAG, "Update check failed: ${e.message}")
-        }
-    }
-
-    private fun handleUpdateCheck(appUpdateInfo: AppUpdateInfo) {
-        when (appUpdateInfo.updateAvailability()) {
-            UpdateAvailability.UPDATE_AVAILABLE -> {
-                Log.d(TAG, "Update available! Version code: ${appUpdateInfo.availableVersionCode()}")
-
-                if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+            when (appUpdateInfo.updateAvailability()) {
+                UpdateAvailability.UPDATE_AVAILABLE -> {
+                    Log.d(TAG, "Update available! Version code: ${appUpdateInfo.availableVersionCode()}")
+                    if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                        startFlexibleUpdate(appUpdateInfo)
+                    } else if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+                        startImmediateUpdate(appUpdateInfo)
+                    } else {
+                        if (manual) openPlayStore()
+                    }
+                }
+                UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> {
+                    Log.d(TAG, "Update already in progress, resuming...")
                     startImmediateUpdate(appUpdateInfo)
-                } else if (appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
-                    startFlexibleUpdate(appUpdateInfo)
+                }
+                UpdateAvailability.UPDATE_NOT_AVAILABLE -> {
+                    Log.d(TAG, "No update available")
+                    if (manual) {
+                        onLatestVersion?.invoke()
+                    }
+                }
+                else -> {
+                    Log.d(TAG, "Update availability: ${appUpdateInfo.updateAvailability()}")
+                    if (manual) {
+                        onLatestVersion?.invoke()
+                    }
                 }
             }
-            UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> {
-                // Resume an already in-progress update
-                Log.d(TAG, "Update already in progress, resuming...")
-                startImmediateUpdate(appUpdateInfo)
-            }
-            UpdateAvailability.UPDATE_NOT_AVAILABLE -> {
-                Log.d(TAG, "No update available")
-            }
-            else -> {
-                Log.d(TAG, "Update availability: ${appUpdateInfo.updateAvailability()}")
+        }.addOnFailureListener { e ->
+            Log.e(TAG, "Update check failed: ${e.message}")
+            if (manual) {
+                if (onFailure != null) {
+                    onFailure(e)
+                } else {
+                    openPlayStore()
+                }
             }
         }
     }
@@ -119,27 +131,31 @@ class InAppUpdateManager(private val activity: Activity) {
         }
     }
 
-    /**
-     * Call from Activity.onResume() to handle cases where the user
-     * returned to the app without completing an immediate update.
-     */
+    fun openPlayStore() {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${activity.packageName}")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${activity.packageName}")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+        }
+    }
+
     fun onResume() {
         appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
-            // If an IMMEDIATE update was interrupted, restart it
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
                 startImmediateUpdate(appUpdateInfo)
             }
-
-            // If a FLEXIBLE update was downloaded but not installed
             if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
                 appUpdateManager.completeUpdate()
             }
         }
     }
 
-    /**
-     * Call from Activity.onDestroy() to clean up listener.
-     */
     fun onDestroy() {
         unregisterListener()
     }
