@@ -39,7 +39,11 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.key
+import com.kharcha.core.designsystem.theme.IncomeGreen
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -93,6 +97,9 @@ fun DashboardScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val isAdFree by viewModel.isAdFree.collectAsState()
+    val isReminderEnabled by viewModel.isReminderEnabled.collectAsState()
+    val reminderHour by viewModel.reminderHour.collectAsState()
+    val reminderMinute by viewModel.reminderMinute.collectAsState()
 
     val context = LocalContext.current
     var showReminderDialog by remember { mutableStateOf(false) }
@@ -155,15 +162,20 @@ fun DashboardScreen(
     }
 
     if (showReminderDialog) {
-        val timePickerState = androidx.compose.material3.rememberTimePickerState(
-            initialHour = 20,
-            initialMinute = 0
-        )
+        val timePickerState = key(reminderHour, reminderMinute) {
+            androidx.compose.material3.rememberTimePickerState(
+                initialHour = reminderHour,
+                initialMinute = reminderMinute
+            )
+        }
+        val period = if (reminderHour >= 12) "PM" else "AM"
+        val displayHour = if (reminderHour % 12 == 0) 12 else reminderHour % 12
+        val formattedSavedTime = String.format("%d:%02d %s", displayHour, reminderMinute, period)
 
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showReminderDialog = false },
             confirmButton = {
-                androidx.compose.material3.TextButton(
+                Button(
                     onClick = {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                             if (androidx.core.content.ContextCompat.checkSelfPermission(
@@ -172,28 +184,39 @@ fun DashboardScreen(
                                 ) != android.content.pm.PackageManager.PERMISSION_GRANTED
                             ) {
                                 permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                return@TextButton
+                                return@Button
                             }
                         }
 
                         viewModel.scheduleReminder(context, timePickerState.hour, timePickerState.minute, true)
                         showReminderDialog = false
-                        android.widget.Toast.makeText(context, "Reminder set!", android.widget.Toast.LENGTH_SHORT).show()
+                        val pickedPeriod = if (timePickerState.hour >= 12) "PM" else "AM"
+                        val pickedDisplayHour = if (timePickerState.hour % 12 == 0) 12 else timePickerState.hour % 12
+                        val pickedTime = String.format("%d:%02d %s", pickedDisplayHour, timePickerState.minute, pickedPeriod)
+                        android.widget.Toast.makeText(context, "Daily reminder set for $pickedTime", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text("Enable")
+                    Text(if (isReminderEnabled) "Save Time" else "Enable")
                 }
             },
             dismissButton = {
-                Row {
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            viewModel.scheduleReminder(context, 0, 0, false)
-                            showReminderDialog = false
-                            android.widget.Toast.makeText(context, "Reminder disabled", android.widget.Toast.LENGTH_SHORT).show()
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (isReminderEnabled) {
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                viewModel.scheduleReminder(context, reminderHour, reminderMinute, false)
+                                showReminderDialog = false
+                                android.widget.Toast.makeText(context, "Reminder disabled", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = ExpenseRed)
+                        ) {
+                            Text("Turn Off")
                         }
+                    }
+                    androidx.compose.material3.TextButton(
+                        onClick = { showReminderDialog = false }
                     ) {
-                        Text("Disable")
+                        Text("Cancel")
                     }
                 }
             },
@@ -205,8 +228,37 @@ fun DashboardScreen(
                     Text(
                         text = "Daily Reminder",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isReminderEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isReminderEnabled) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    )
+                            )
+                            Text(
+                                text = if (isReminderEnabled) "Active • $formattedSavedTime" else "Currently Off",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isReminderEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
                     androidx.compose.material3.TimePicker(state = timePickerState)
                 }
             }
@@ -298,14 +350,28 @@ fun DashboardScreen(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(
+                                    if (isReminderEnabled) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant
+                                )
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Notifications,
-                                contentDescription = "Reminders",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Notifications,
+                                    contentDescription = "Reminders",
+                                    tint = if (isReminderEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                if (isReminderEnabled) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(IncomeGreen)
+                                            .align(Alignment.TopEnd)
+                                    )
+                                }
+                            }
                         }
 
                         IconButton(
@@ -382,10 +448,10 @@ fun DashboardScreen(
                         onClick = onNavigateToAllTransactions
                     )
                     QuickActionButton(
-                        title = "Reminders",
+                        title = if (isReminderEnabled) "Reminder ON" else "Reminders",
                         icon = Icons.Rounded.Notifications,
-                        backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        backgroundColor = if (isReminderEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (isReminderEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                         onClick = { showReminderDialog = true }
                     )

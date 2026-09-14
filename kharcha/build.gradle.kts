@@ -123,7 +123,6 @@ dependencies {
 
     implementation("androidx.compose.material3:material3:1.3.1") // Force 1.3.1 for MenuAnchorType and AutoMirrored icons
     implementation(libs.compose.material.icons)
-    implementation(libs.compose.material.icons)
     implementation(libs.compose.animation)
     implementation("androidx.compose.animation:animation-core")
     implementation(libs.compose.ui.text.google.fonts)

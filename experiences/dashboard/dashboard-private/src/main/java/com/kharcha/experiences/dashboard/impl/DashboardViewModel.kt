@@ -14,6 +14,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,6 +35,27 @@ class DashboardViewModel @Inject constructor(
 
     private val _isAdFree = MutableStateFlow(false)
     val isAdFree: StateFlow<Boolean> = _isAdFree.asStateFlow()
+
+    val isReminderEnabled: StateFlow<Boolean> = kharchaPreferences.isReminderEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    val reminderHour: StateFlow<Int> = kharchaPreferences.reminderHour
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 20
+        )
+
+    val reminderMinute: StateFlow<Int> = kharchaPreferences.reminderMinute
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
 
     private var allCachedTransactions: List<Transaction> = emptyList()
     private var allCachedCollections: List<CollectionModel> = emptyList()
@@ -176,6 +199,9 @@ class DashboardViewModel @Inject constructor(
 
     fun scheduleReminder(context: android.content.Context, hour: Int, minute: Int, isEnabled: Boolean) {
         reminderManager.scheduleReminder(context, hour, minute, isEnabled)
+        viewModelScope.launch {
+            kharchaPreferences.setReminderSettings(isEnabled, hour, minute)
+        }
     }
 
     fun sendTestNotification(context: android.content.Context) {

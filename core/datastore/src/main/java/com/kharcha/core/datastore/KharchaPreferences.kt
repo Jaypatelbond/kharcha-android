@@ -3,6 +3,7 @@ package com.kharcha.core.datastore
 import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -26,6 +27,9 @@ class KharchaPreferences @Inject constructor(
         private val APP_LOCK_ENABLED_KEY = booleanPreferencesKey("app_lock_enabled")
         private val APP_LOCK_PIN_HASH_KEY = stringPreferencesKey("app_lock_pin_hash")
         private val BIOMETRIC_UNLOCK_ENABLED_KEY = booleanPreferencesKey("biometric_unlock_enabled")
+        private val REMINDER_ENABLED_KEY = booleanPreferencesKey("reminder_enabled")
+        private val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
+        private val REMINDER_MINUTE_KEY = intPreferencesKey("reminder_minute")
 
         fun hashPin(pin: String): String {
             val bytes = MessageDigest.getInstance("SHA-256").digest(pin.toByteArray())
@@ -55,6 +59,26 @@ class KharchaPreferences @Inject constructor(
 
     val isBiometricEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[BIOMETRIC_UNLOCK_ENABLED_KEY] ?: true
+    }
+
+    val isReminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[REMINDER_ENABLED_KEY] ?: false
+    }
+
+    val reminderHour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[REMINDER_HOUR_KEY] ?: 20
+    }
+
+    val reminderMinute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[REMINDER_MINUTE_KEY] ?: 0
+    }
+
+    suspend fun setReminderSettings(enabled: Boolean, hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[REMINDER_ENABLED_KEY] = enabled
+            prefs[REMINDER_HOUR_KEY] = hour
+            prefs[REMINDER_MINUTE_KEY] = minute
+        }
     }
 
     fun verifyPin(enteredPin: String, storedHash: String): Boolean {
