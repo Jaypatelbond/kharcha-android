@@ -54,15 +54,25 @@ fun BackupScreen(
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-                viewModel.onSignInSuccess(account)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(context, "Google sign in failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+            viewModel.onSignInSuccess(account)
+        } catch (e: com.google.android.gms.common.api.ApiException) {
+            e.printStackTrace()
+            val msg = when (e.statusCode) {
+                10 -> "Google Sign-In Error 10 (DEVELOPER_ERROR): Release/Play Store SHA-1 is not added to Google Cloud Console."
+                12500 -> "Google Sign-In Error 12500: Check Google Cloud Console OAuth consent screen and SHA-1."
+                12501 -> null // User dismissed
+                7 -> "Network error (7): Please check your internet connection."
+                else -> "Google Sign-In error (" + e.statusCode + "): " + e.message
             }
+            if (msg != null) {
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Google sign in failed: " + e.message, Toast.LENGTH_LONG).show()
         }
     }
     
