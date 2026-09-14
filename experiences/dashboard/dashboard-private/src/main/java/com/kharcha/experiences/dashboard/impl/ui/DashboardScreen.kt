@@ -256,7 +256,9 @@ fun DashboardScreen(
 
     Scaffold(
         bottomBar = {
-            AdMobBanner(isAdFree = isAdFree)
+            if (!isAdFree) {
+                AdMobBanner(isAdFree = isAdFree)
+            }
         }
     ) { padding ->
         LazyColumn(

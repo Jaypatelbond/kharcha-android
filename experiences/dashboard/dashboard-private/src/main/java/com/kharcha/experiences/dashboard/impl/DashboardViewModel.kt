@@ -2,6 +2,7 @@ package com.kharcha.experiences.dashboard.impl
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kharcha.core.datastore.KharchaPreferences
 import com.kharcha.core.model.Transaction
 import com.kharcha.core.model.TransactionType
 import com.kharcha.core.model.CollectionModel
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val repository: TransactionRepository,
     private val collectionRepository: CollectionRepository,
-    private val reminderManager: ReminderManager
+    private val reminderManager: ReminderManager,
+    private val kharchaPreferences: KharchaPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -36,6 +38,12 @@ class DashboardViewModel @Inject constructor(
     private var allCachedCollections: List<CollectionModel> = emptyList()
 
     init {
+        viewModelScope.launch {
+            kharchaPreferences.isAdFree.collect {
+                _isAdFree.value = it
+            }
+        }
+
         viewModelScope.launch {
             combine(
                 repository.getAllTransactions(),
