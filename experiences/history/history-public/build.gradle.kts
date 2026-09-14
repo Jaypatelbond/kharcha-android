@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.kharcha.experiences.history.api"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

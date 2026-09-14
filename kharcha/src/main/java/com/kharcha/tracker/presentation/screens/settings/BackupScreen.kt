@@ -279,7 +279,7 @@ fun BackupScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(state.backups, key = { it.id }) { item ->
+                    items(state.backups, key = { it.name }) { item ->
                         BackupCard(
                             item = item,
                             isRestoring = state.isRestoring,
@@ -332,10 +332,31 @@ fun BackupCard(
                     Text(date, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.width(8.dp))
                     
-                    // Source badge (Cloud vs Device)
+                    // Storage badge (Cloud & Device vs Cloud vs Device)
+                    val badgeColor = when (item.storageType) {
+                        com.kharcha.core.model.BackupStorageType.SYNCED -> TealPrimary.copy(alpha = 0.15f)
+                        com.kharcha.core.model.BackupStorageType.CLOUD_ONLY -> Color(0xFF4285F4).copy(alpha = 0.15f)
+                        com.kharcha.core.model.BackupStorageType.LOCAL_ONLY -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                    val badgeTint = when (item.storageType) {
+                        com.kharcha.core.model.BackupStorageType.SYNCED -> TealPrimary
+                        com.kharcha.core.model.BackupStorageType.CLOUD_ONLY -> Color(0xFF4285F4)
+                        com.kharcha.core.model.BackupStorageType.LOCAL_ONLY -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    val badgeText = when (item.storageType) {
+                        com.kharcha.core.model.BackupStorageType.SYNCED -> "Cloud & Device"
+                        com.kharcha.core.model.BackupStorageType.CLOUD_ONLY -> "Cloud"
+                        com.kharcha.core.model.BackupStorageType.LOCAL_ONLY -> "Device"
+                    }
+                    val badgeIcon = when (item.storageType) {
+                        com.kharcha.core.model.BackupStorageType.SYNCED -> Icons.Rounded.CloudDone
+                        com.kharcha.core.model.BackupStorageType.CLOUD_ONLY -> Icons.Rounded.Cloud
+                        com.kharcha.core.model.BackupStorageType.LOCAL_ONLY -> Icons.Rounded.PhoneAndroid
+                    }
+
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = if (item.isCloud) TealPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        color = badgeColor,
                         modifier = Modifier.padding(2.dp)
                     ) {
                         Row(
@@ -343,18 +364,18 @@ fun BackupCard(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Icon(
-                                imageVector = if (item.isCloud) Icons.Rounded.Cloud else Icons.Rounded.PhoneAndroid,
+                                imageVector = badgeIcon,
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp),
-                                tint = if (item.isCloud) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = badgeTint
                             )
                             Spacer(modifier = Modifier.width(3.dp))
                             Text(
-                                text = if (item.isCloud) "Cloud" else "Device",
+                                text = badgeText,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (item.isCloud) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = badgeTint
                             )
                         }
                     }

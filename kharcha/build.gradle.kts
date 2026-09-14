@@ -10,15 +10,15 @@ plugins {
 
 android {
     namespace = "com.kharcha.tracker"
-    compileSdk = 35
-    buildToolsVersion = "35.0.0"
+    compileSdk = 37
+    buildToolsVersion = "37.0.0"
 
     defaultConfig {
         applicationId = "com.kharcha.tracker"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 6
-        versionName = "1.2.2"
+        targetSdk = 37
+        versionCode = 8
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

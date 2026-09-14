@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.kharcha.core.data"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
