@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.UploadFile
 import androidx.compose.material3.Card
@@ -62,7 +61,6 @@ import com.kharcha.core.common.util.DateUtils
 fun SettingsScreen(
     isDarkMode: Boolean,
     onDarkModeToggle: (Boolean) -> Unit,
-    onScanSmsClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
     onBudgetClick: () -> Unit,
     onLoansClick: () -> Unit,
@@ -366,15 +364,6 @@ fun SettingsScreen(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        SettingsItem(
-            icon = Icons.Rounded.Sms,
-            title = "Scan SMS Transactions",
-            subtitle = "Auto-detect expenses from bank SMS",
-            onClick = onScanSmsClick
-        )
-        
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsItem(

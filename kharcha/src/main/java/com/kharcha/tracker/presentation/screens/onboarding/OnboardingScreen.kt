@@ -113,9 +113,9 @@ fun OnboardingPage(page: Int) {
                 "👋"
             )
             1 -> Triple(
-                "SMS Auto-Tracking",
-                "Automatically track expenses from bank SMS. No manual entry needed.",
-                "📩"
+                "Expense Books & Collections",
+                "Organize expenses into separate books like Home, Travel & Personal.",
+                "📚"
             )
             2 -> Triple(
                 "Split w/ Friends",

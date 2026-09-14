@@ -11,7 +11,6 @@
 - **Google Account**: If you choose to use the Cloud Backup or Export features, we authenticate you via your Google Account. We do **not** store your password.
 
 ### B. Permissions
-- **Read SMS**: If enabled, the app reads generic bank transaction SMS messages to automate expense tracking. This processing happens entirely **on-device**. We do not upload your SMS data to any server.
 - **Google Drive**: We request access to your `appDataFolder` (for hidden backups) and `drive.file` (for exporting Sheets) to providing backup and export functionality. We do not access other files in your Drive.
 - **AdMob**: We use Google AdMob to display advertisements. AdMob may collect data to serve personalized ads.
 

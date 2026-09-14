@@ -5,18 +5,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.kharcha.core.database.AppDatabase
-import com.kharcha.core.database.dao.SmsTransactionDao
 import com.kharcha.core.database.dao.SplitDao
 import com.kharcha.core.database.dao.TransactionDao
 import com.kharcha.core.database.util.CategoryDefaults
-import com.kharcha.core.database.util.HomeExpenseSeeder
-import com.kharcha.core.data.repository.SmsRepositoryImpl
 import com.kharcha.core.data.repository.SplitRepositoryImpl
 import com.kharcha.core.data.repository.TransactionRepositoryImpl
-import com.kharcha.core.domain.repository.SmsRepository
 import com.kharcha.core.domain.repository.SplitRepository
 import com.kharcha.core.domain.repository.TransactionRepository
-import com.kharcha.core.data.util.SmsReader
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -47,7 +42,8 @@ object AppModule {
                 AppDatabase.MIGRATION_8_9,
                 AppDatabase.MIGRATION_9_10,
                 AppDatabase.MIGRATION_10_11,
-                AppDatabase.MIGRATION_11_12
+                AppDatabase.MIGRATION_11_12,
+                AppDatabase.MIGRATION_12_13
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -60,8 +56,6 @@ object AppModule {
                             arrayOf(cat.name, cat.type, cat.iconName, cat.color, if (cat.isDefault) 1 else 0, cat.createdAt)
                         )
                     }
-                    // Seed historical home expenses from Excel tracker
-                    HomeExpenseSeeder.seed(db)
 
                     // Seed collections
                     val defaultCols = listOf(
@@ -112,10 +106,6 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSmsTransactionDao(db: AppDatabase): SmsTransactionDao = db.smsTransactionDao()
-
-    @Provides
-    @Singleton
     fun provideSplitDao(db: AppDatabase): SplitDao = db.splitDao()
 
     @Provides
@@ -131,18 +121,6 @@ object AppModule {
     @Singleton
     fun provideCategoryRepository(dao: com.kharcha.core.database.dao.CategoryDao): com.kharcha.core.domain.repository.CategoryRepository =
         com.kharcha.core.data.repository.CategoryRepositoryImpl(dao)
-
-    @Provides
-    @Singleton
-    fun provideSmsReader(@ApplicationContext context: Context): SmsReader = SmsReader(context)
-
-    @Provides
-    @Singleton
-    fun provideSmsRepository(
-        dao: SmsTransactionDao,
-        transactionRepository: TransactionRepository,
-        smsReader: SmsReader
-    ): SmsRepository = SmsRepositoryImpl(dao, transactionRepository, smsReader)
 
     @Provides
     @Singleton

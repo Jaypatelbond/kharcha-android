@@ -89,8 +89,6 @@ val PrivacyPolicySections = listOf(
         content = """
             Local Data Storage: Kharcha is primarily a local-first application. Your financial data, transactions, and categories are stored locally on your device using an encrypted database. We do not automatically upload this data to any external server.
 
-            SMS Permissions: If you enable the "Scan SMS" feature, the app accesses your SMS messages locally to identify transaction alerts. This processing happens entirely on your device. Your SMS content is never transmitted to us or any third party.
-
             Google Drive Backup: If you choose to use the Cloud Backup feature, your data is encrypted and uploaded directly to your personal Google Drive account. We do not have access to your Google Drive files or the content of your backups.
         """.trimIndent()
     ),
@@ -100,7 +98,7 @@ val PrivacyPolicySections = listOf(
     ),
     LegalSection(
         title = "4. Analytics & Improvements",
-        content = "We use Google Firebase Analytics and Crashlytics to improve app stability and user experience. These services collect anonymous usage data and crash reports. They do not access your personal financial records or SMS content."
+        content = "We use Google Firebase Analytics and Crashlytics to improve app stability and user experience. These services collect anonymous usage data and crash reports. They do not access your personal financial records."
     ),
     LegalSection(
         title = "5. Security",

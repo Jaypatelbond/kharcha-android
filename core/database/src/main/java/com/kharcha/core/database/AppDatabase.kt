@@ -6,12 +6,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.kharcha.core.database.dao.CreditCardDao
 import com.kharcha.core.database.dao.IncomeDao
-import com.kharcha.core.database.dao.SmsTransactionDao
 import com.kharcha.core.database.dao.SplitDao
 import com.kharcha.core.database.dao.TransactionDao
 import com.kharcha.core.database.entity.CreditCardEntity
 import com.kharcha.core.database.entity.IncomeProfileEntity
-import com.kharcha.core.database.entity.SmsTransactionEntity
 import com.kharcha.core.database.entity.SplitExpenseEntity
 import com.kharcha.core.database.entity.SplitExpenseShareEntity
 import com.kharcha.core.database.entity.SplitGroupEntity
@@ -21,7 +19,6 @@ import com.kharcha.core.database.entity.TransactionEntity
 @Database(
     entities = [
         TransactionEntity::class,
-        SmsTransactionEntity::class,
         SplitGroupEntity::class,
         SplitMemberEntity::class,
         SplitExpenseEntity::class,
@@ -34,12 +31,11 @@ import com.kharcha.core.database.entity.TransactionEntity
         com.kharcha.core.database.entity.BudgetEntity::class,
         com.kharcha.core.database.entity.CollectionEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
-    abstract fun smsTransactionDao(): SmsTransactionDao
     abstract fun splitDao(): SplitDao
     abstract fun categoryDao(): com.kharcha.core.database.dao.CategoryDao
     abstract fun recurringDao(): com.kharcha.core.database.dao.RecurringDao
@@ -250,6 +246,12 @@ abstract class AppDatabase : RoomDatabase() {
 
 
         
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS `sms_transactions`")
+            }
+        }
+
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
@@ -294,16 +296,12 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE `transactions` ADD COLUMN `collection` TEXT NOT NULL DEFAULT 'Home Expenses'")
-                // Clear previous partial transactions and re-seed the full collection dataset
-                database.execSQL("DELETE FROM `transactions`")
-                com.kharcha.core.database.util.HomeExpenseSeeder.seed(database)
             }
         }
 
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Seed historical home expenses from Excel tracker into existing installations
-                com.kharcha.core.database.util.HomeExpenseSeeder.seed(database)
+                // Historical migration no-op
             }
         }
 

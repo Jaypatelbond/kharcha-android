@@ -98,7 +98,6 @@ fun AddLoanScreen(
     var selectedLoanType by remember { mutableStateOf("PERSONAL") }
     var showBankPicker by remember { mutableStateOf(false) }
 
-    val isFromSms = prefillEmiAmount.isNotEmpty()
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     // Auto-set interest rate when loan type changes
@@ -119,7 +118,6 @@ fun AddLoanScreen(
 
     // EMI Calculation
     LaunchedEffect(principal, interestRate, tenureMonths) {
-        if (isFromSms && emi.isNotEmpty()) return@LaunchedEffect
         val p = principal.toDoubleOrNull()
         val r = interestRate.toDoubleOrNull()?.div(1200)
         val n = tenureMonths.toIntOrNull()
@@ -137,7 +135,7 @@ fun AddLoanScreen(
                 title = {
                     Column {
                         Text(
-                            if (isFromSms) "Track SMS Loan" else "Add New Loan",
+                            "Add New Loan",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -165,36 +163,6 @@ fun AddLoanScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ── SMS Banner ──────────────────────────────────────────
-            if (isFromSms) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = TealPrimary.copy(alpha = 0.1f)),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("📱", fontSize = 22.sp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                "Auto-detected from SMS",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = TealPrimary
-                            )
-                            Text(
-                                "Bank and EMI pre-filled. Add remaining details.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
             // ── 1. Loan Type Selector ───────────────────────────────
             Text(
                 "Loan Type",
@@ -408,7 +376,7 @@ fun AddLoanScreen(
                         ) {
                             Column {
                                 Text(
-                                    if (isFromSms) "EMI from SMS" else "Estimated Monthly EMI",
+                                    "Estimated Monthly EMI",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )

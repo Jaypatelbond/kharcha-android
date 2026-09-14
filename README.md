@@ -11,7 +11,6 @@ A complete offline expense tracker Android app targeting the Indian market, buil
 - **Add Transactions**: Easily add income/expense with 20+ India-specific categories.
 - **Charts & Stats**: Visualize spending with Donut and Bar charts.
 - **Daily Reminders**: Get notified to log expenses.
-- **SMS Scanner**: (Experimental) Auto-detect transactions from bank SMS.
 - **Splitwise**: (Premium) Split expenses with friends and track balances offline.
 - **Material 3 Design**: Modern, clean, and responsive UI.
 - **Dark Mode**: Fully supported.

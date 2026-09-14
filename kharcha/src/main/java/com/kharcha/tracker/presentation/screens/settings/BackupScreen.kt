@@ -5,66 +5,42 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.CloudUpload
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.api.services.drive.DriveScopes
 import com.kharcha.core.designsystem.theme.TealPrimary
+import com.kharcha.core.model.BackupItem
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("DEPRECATION") // TODO: Migrate to Credential Manager
 @Composable
 fun BackupScreen(
     onBack: () -> Unit,
     viewModel: BackupViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val state by viewModel.uiState.collectAsState()
 
     val gso = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -85,16 +61,23 @@ fun BackupScreen(
                 viewModel.onSignInSuccess(account)
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Sign in failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Google sign in failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
     
-    // Check if already signed in on start
+    // Auto-attempt silent sign in on start
     LaunchedEffect(Unit) {
-        val account = GoogleSignIn.getLastSignedInAccount(context)
-        if (account != null && GoogleSignIn.hasPermissions(account, com.google.android.gms.common.api.Scope(DriveScopes.DRIVE_APPDATA))) {
-            viewModel.onSignInSuccess(account)
+        val client = GoogleSignIn.getClient(context, gso)
+        client.silentSignIn().addOnCompleteListener { task ->
+            if (task.isSuccessful && task.result != null) {
+                viewModel.onSignInSuccess(task.result)
+            } else {
+                val account = GoogleSignIn.getLastSignedInAccount(context)
+                if (account != null && GoogleSignIn.hasPermissions(account, com.google.android.gms.common.api.Scope(DriveScopes.DRIVE_APPDATA))) {
+                    viewModel.onSignInSuccess(account)
+                }
+            }
         }
     }
 
@@ -104,9 +87,9 @@ fun BackupScreen(
     }
 
     // Delete confirmation dialog
-    state.showDeleteDialog?.let { file ->
+    state.showDeleteDialog?.let { item ->
         val date = try {
-            SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(file.createdTime.value))
+            SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(item.timestamp))
         } catch (e: Exception) { "Unknown Date" }
 
         AlertDialog(
@@ -115,7 +98,7 @@ fun BackupScreen(
             text = { Text("This will permanently delete the backup from $date. This action cannot be undone.") },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.deleteBackup(file) },
+                    onClick = { viewModel.deleteBackup(item) },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = Color.White
@@ -131,7 +114,7 @@ fun BackupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cloud Backup & Sync") },
+                title = { Text("Cloud & Device Backup", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
@@ -144,71 +127,166 @@ fun BackupScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (!state.isSignedIn) {
-                Spacer(modifier = Modifier.height(32.dp))
-                Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Sign in with Google to backup your data.", style = MaterialTheme.typography.bodyLarge)
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        val client = GoogleSignIn.getClient(context, gso)
-                        googleSignInLauncher.launch(client.signInIntent)
-                    }
-                ) {
-                    Text("Connect Google Drive")
-                }
-            } else {
-                // Actions
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Backup Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Button(
-                                onClick = { viewModel.backupNow() },
-                                enabled = !state.isBackingUp
+            // Google Drive Connection & Quick Action Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(if (state.isSignedIn) TealPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                if (state.isBackingUp) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                }
-                                Text("Backup Now")
+                                Icon(
+                                    imageVector = if (state.isSignedIn) Icons.Rounded.CloudDone else Icons.Rounded.CloudOff,
+                                    contentDescription = null,
+                                    tint = if (state.isSignedIn) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (state.isSignedIn) "Google Drive Synced" else "Google Drive",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (state.isSignedIn) (state.accountEmail ?: "Connected") else "Not connected",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (!state.isSignedIn) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val client = GoogleSignIn.getClient(context, gso)
+                                    googleSignInLauncher.launch(client.signInIntent)
+                                },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Connect", fontSize = 13.sp)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = {
+                                    val client = GoogleSignIn.getClient(context, gso)
+                                    client.signOut().addOnCompleteListener { viewModel.onSignOut() }
+                                },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text("Disconnect", fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.backupNow(toCloud = state.isSignedIn) },
+                            enabled = !state.isBackingUp,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                        ) {
+                            if (state.isBackingUp) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                            } else {
+                                Icon(Icons.Rounded.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                            Text(if (state.isSignedIn) "Backup to Cloud" else "Backup Now")
+                        }
+
+                        if (state.isSignedIn) {
+                            OutlinedButton(
+                                onClick = { viewModel.backupNow(toCloud = false) },
+                                enabled = !state.isBackingUp,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.PhoneAndroid, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Local", fontSize = 13.sp)
                             }
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                Text("Available Backups", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-                if (state.backups.isEmpty()) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Text(
-                        text = "No backups found on Google Drive.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.backups) { file ->
-                            BackupItem(
-                                file = file,
-                                isRestoring = state.isRestoring,
-                                isDeleting = state.isDeleting,
-                                onRestore = { viewModel.restore(file) },
-                                onDelete = { viewModel.showDeleteConfirmation(file) }
-                            )
-                        }
+            // Header for Available Backups
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Available Backups",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = { viewModel.fetchBackups() }) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (state.backups.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Rounded.Storage, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No backups found.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Tap 'Backup Now' to create one.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(state.backups, key = { it.id }) { item ->
+                        BackupCard(
+                            item = item,
+                            isRestoring = state.isRestoring,
+                            isDeleting = state.isDeleting,
+                            onRestore = { viewModel.restore(item) },
+                            onDelete = { viewModel.showDeleteConfirmation(item) }
+                        )
                     }
                 }
             }
@@ -217,35 +295,85 @@ fun BackupScreen(
 }
 
 @Composable
-fun BackupItem(
-    file: com.google.api.services.drive.model.File,
+fun BackupCard(
+    item: BackupItem,
     isRestoring: Boolean,
     isDeleting: Boolean,
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
     val date = try {
-        SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()).format(Date(file.createdTime.value))
+        SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(item.timestamp))
     } catch (e: Exception) { "Unknown Date" }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val formattedSize = remember(item.sizeBytes) {
+        when {
+            item.sizeBytes <= 0 -> "< 1 KB"
+            item.sizeBytes < 1024 -> "${item.sizeBytes} B"
+            item.sizeBytes < 1024 * 1024 -> "${item.sizeBytes / 1024} KB"
+            else -> String.format(Locale.getDefault(), "%.1f MB", item.sizeBytes / (1024.0 * 1024.0))
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(14.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(date, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("Size: ${file.getSize() ?: "Unknown"} bytes", style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(date, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    // Source badge (Cloud vs Device)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (item.isCloud) TealPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.padding(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (item.isCloud) Icons.Rounded.Cloud else Icons.Rounded.PhoneAndroid,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = if (item.isCloud) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (item.isCloud) "Cloud" else "Device",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (item.isCloud) TealPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Size: $formattedSize • Kharcha SQLite DB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
+
             if (isRestoring || isDeleting) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onRestore) {
-                        Icon(Icons.Rounded.CloudDownload, contentDescription = "Restore", tint = TealPrimary)
+                        Icon(Icons.Rounded.Restore, contentDescription = "Restore", tint = TealPrimary)
                     }
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)

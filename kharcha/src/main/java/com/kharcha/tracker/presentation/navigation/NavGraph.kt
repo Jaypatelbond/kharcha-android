@@ -17,7 +17,6 @@ import com.kharcha.experiences.history.api.HistoryFeatureApi
 import com.kharcha.experiences.addtransaction.api.AddTransactionFeatureApi
 import com.kharcha.tracker.presentation.screens.managecategories.ManageCategoriesScreen
 import com.kharcha.tracker.presentation.screens.settings.SettingsScreen
-import com.kharcha.tracker.presentation.screens.sms.SmsScanScreen
 import com.kharcha.tracker.presentation.screens.split.addexpense.AddSplitExpenseScreen
 import com.kharcha.tracker.presentation.screens.split.detail.GroupDetailScreen
 import com.kharcha.tracker.presentation.screens.split.groups.GroupsListScreen
@@ -30,7 +29,6 @@ object Routes {
     const val SETTINGS = "settings"
     const val ADD_TRANSACTION = "add_transaction"
     const val EDIT_TRANSACTION = "add_transaction/{id}"
-    const val SMS_SCAN = "sms_scan"
     
     // Splitwise Routes
     const val GROUPS = "groups"
@@ -106,7 +104,6 @@ fun NavGraph(
             SettingsScreen(
                 isDarkMode = isDarkMode,
                 onDarkModeToggle = onDarkModeToggle,
-                onScanSmsClick = { navController.navigate(Routes.SMS_SCAN) },
                 onManageCategoriesClick = { navController.navigate(Routes.MANAGE_CATEGORIES) },
                 onBudgetClick = { navController.navigate(Routes.BUDGET) },
                 onLoansClick = { navController.navigate(Routes.LOANS) },
@@ -208,29 +205,7 @@ fun NavGraph(
             com.kharcha.tracker.presentation.screens.budget.BudgetScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(
-            route = Routes.SMS_SCAN,
-            enterTransition = {
-                slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Up,
-                    tween(350)
-                )
-            },
-            exitTransition = {
-                slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Down,
-                    tween(350)
-                )
-            }
-        ) {
-            SmsScanScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToAddLoan = { bankName, emiAmount ->
-                    navController.navigate(Routes.addLoanWithArgs(bankName, emiAmount))
-                }
-            )
-        }
-        
+
         // --- Splitwise Screens ---
         
         composable(Routes.GROUPS) {
