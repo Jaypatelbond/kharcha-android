@@ -45,7 +45,9 @@ object AppModule {
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
                 AppDatabase.MIGRATION_8_9,
-                AppDatabase.MIGRATION_9_10
+                AppDatabase.MIGRATION_9_10,
+                AppDatabase.MIGRATION_10_11,
+                AppDatabase.MIGRATION_11_12
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
@@ -60,6 +62,26 @@ object AppModule {
                     }
                     // Seed historical home expenses from Excel tracker
                     HomeExpenseSeeder.seed(db)
+
+                    // Seed collections
+                    val defaultCols = listOf(
+                        "Home Expenses" to 1,
+                        "Personal & MISC" to 0,
+                        "Bike" to 0,
+                        "Sissy Expenses" to 0,
+                        "Home Renovation" to 0,
+                        "Car" to 0,
+                        "Legal & Lawyer" to 0,
+                        "Lend & Borrow" to 0,
+                        "Investments" to 0
+                    )
+                    val now = System.currentTimeMillis()
+                    for ((colName, isDef) in defaultCols) {
+                        db.execSQL(
+                            "INSERT OR IGNORE INTO collections (name, isDefault, createdAt) VALUES (?, ?, ?)",
+                            arrayOf(colName, isDef, now)
+                        )
+                    }
                 }
             })
             .build()
@@ -127,6 +149,18 @@ object AppModule {
     fun provideKharchaPreferences(
         @ApplicationContext context: Context
     ): com.kharcha.core.datastore.KharchaPreferences = com.kharcha.core.datastore.KharchaPreferences(context)
+
+    @Provides
+    @Singleton
+    fun provideCollectionDao(db: AppDatabase): com.kharcha.core.database.dao.CollectionDao = db.collectionDao()
+
+    @Provides
+    @Singleton
+    fun provideCollectionRepository(
+        collectionDao: com.kharcha.core.database.dao.CollectionDao,
+        transactionDao: TransactionDao
+    ): com.kharcha.core.domain.repository.CollectionRepository =
+        com.kharcha.core.data.repository.CollectionRepositoryImpl(collectionDao, transactionDao)
 
     @Provides
     @Singleton

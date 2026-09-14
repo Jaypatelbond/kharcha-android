@@ -22,4 +22,6 @@ interface TransactionRepository {
     suspend fun deleteTransaction(transaction: Transaction)
     suspend fun getTransactionById(id: Long): Transaction?
     fun getTotalBalance(): Flow<Double>
+    fun getAllCollections(): Flow<List<String>>
+    fun getTransactionsByCollection(collection: String): Flow<List<Transaction>>
 }

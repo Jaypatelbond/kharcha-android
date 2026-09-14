@@ -31,9 +31,10 @@ import com.kharcha.core.database.entity.TransactionEntity
         com.kharcha.core.database.entity.LoanEntity::class,
         CreditCardEntity::class,
         IncomeProfileEntity::class,
-        com.kharcha.core.database.entity.BudgetEntity::class
+        com.kharcha.core.database.entity.BudgetEntity::class,
+        com.kharcha.core.database.entity.CollectionEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -46,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun creditCardDao(): CreditCardDao
     abstract fun incomeDao(): IncomeDao
     abstract fun budgetDao(): com.kharcha.core.database.dao.BudgetDao
+    abstract fun collectionDao(): com.kharcha.core.database.dao.CollectionDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -246,6 +248,57 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+
+        
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `collections` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `isDefault` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """)
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_collections_name` ON `collections` (`name`)")
+
+                // Prepopulate standard collections
+                val defaultCollections = listOf(
+                    "Home Expenses" to 1,
+                    "Personal & MISC" to 0,
+                    "Bike" to 0,
+                    "Sissy Expenses" to 0,
+                    "Home Renovation" to 0,
+                    "Car" to 0,
+                    "Legal & Lawyer" to 0,
+                    "Lend & Borrow" to 0,
+                    "Investments" to 0
+                )
+                val now = System.currentTimeMillis()
+                for ((colName, isDef) in defaultCollections) {
+                    database.execSQL(
+                        "INSERT OR IGNORE INTO collections (name, isDefault, createdAt) VALUES (?, ?, ?)",
+                        arrayOf(colName, isDef, now)
+                    )
+                }
+
+                // Also insert any distinct collections already in transactions
+                database.execSQL("""
+                    INSERT OR IGNORE INTO collections (name, isDefault, createdAt)
+                    SELECT DISTINCT collection, 0, $now FROM transactions
+                    WHERE collection IS NOT NULL AND collection != ''
+                """)
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `transactions` ADD COLUMN `collection` TEXT NOT NULL DEFAULT 'Home Expenses'")
+                // Clear previous partial transactions and re-seed the full collection dataset
+                database.execSQL("DELETE FROM `transactions`")
+                com.kharcha.core.database.util.HomeExpenseSeeder.seed(database)
+            }
+        }
 
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {

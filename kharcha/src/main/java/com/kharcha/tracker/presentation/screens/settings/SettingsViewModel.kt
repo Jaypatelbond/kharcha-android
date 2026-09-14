@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kharcha.core.datastore.KharchaPreferences
 import com.kharcha.core.domain.repository.CategoryRepository
+import com.kharcha.core.domain.repository.CollectionRepository
+import com.kharcha.core.model.CollectionModel
 import com.kharcha.core.domain.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -30,11 +34,27 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val repository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
+    private val collectionRepository: CollectionRepository,
     @ApplicationContext private val context: Context,
     private val analyticsManager: com.kharcha.core.data.analytics.AnalyticsManager,
     private val kharchaPreferences: KharchaPreferences,
     private val googleDriveHelper: com.kharcha.core.data.remote.GoogleDriveHelper
 ) : ViewModel() {
+
+    val collections: StateFlow<List<CollectionModel>> = collectionRepository.getCollections()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun createCollection(name: String) {
+        viewModelScope.launch { collectionRepository.addCollection(name) }
+    }
+
+    fun renameCollection(oldName: String, newName: String) {
+        viewModelScope.launch { collectionRepository.renameCollection(oldName, newName) }
+    }
+
+    fun deleteCollection(name: String) {
+        viewModelScope.launch { collectionRepository.deleteCollection(name) }
+    }
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()

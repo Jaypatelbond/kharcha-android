@@ -160,11 +160,11 @@ fun KharchaAppContent(
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar(
-                                containerColor = Color(0xFF0C121F),
+                                containerColor = MaterialTheme.colorScheme.surface,
                                 tonalElevation = 0.dp,
                                 modifier = Modifier.border(
                                     width = 1.dp,
-                                    color = Color(0x33475569),
+                                    color = MaterialTheme.colorScheme.outline,
                                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                                 )
                             ) {
@@ -192,11 +192,11 @@ fun KharchaAppContent(
                                         },
                                         label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                                         colors = NavigationBarItemDefaults.colors(
-                                            selectedIconColor = TealPrimary,
-                                            selectedTextColor = TealPrimary,
-                                            unselectedIconColor = Color(0xFF64748B),
-                                            unselectedTextColor = Color(0xFF64748B),
-                                            indicatorColor = Color(0x2600F5D4)
+                                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                         )
                                     )
                                 }
@@ -207,8 +207,8 @@ fun KharchaAppContent(
                         if (showBottomBar && currentRoute != Routes.GROUPS) {
                             FloatingActionButton(
                                 onClick = { navController.navigate(addTransactionFeatureApi.addTransactionRoute) },
-                                containerColor = TealPrimary,
-                                contentColor = MaterialTheme.colorScheme.background,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary,
                                 shape = CircleShape,
                                 elevation = FloatingActionButtonDefaults.elevation(8.dp)
                             ) {

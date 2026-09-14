@@ -4,24 +4,25 @@ import androidx.compose.ui.graphics.Color
 
 // Sleek Dark Modern Theme Palette
 val DarkBackground = Color(0xFF090D16)      // Deep obsidian
-val DarkSurface = Color(0xFF101726)         // Midnight charcoal
-val DarkCard = Color(0xFF162032)            // Elevated card
-val DarkCardVariant = Color(0xFF1E2B42)     // Slightly lighter card / hover
-val GlassBorder = Color(0x3364748B)         // Subtle frosted glass border
-val GlassBorderLight = Color(0x1F94A3B8)    // Ultra subtle border
+val DarkSurface = Color(0xFF111827)         // Sleek charcoal slate (elevated)
+val DarkCard = Color(0xFF1E293B)            // Elevated card
+val DarkCardVariant = Color(0xFF24324A)     // Lighter card / hover
+val GlassBorder = Color(0x3364748B)         // Frosted glass border
+val GlassBorderLight = Color(0xFFE2E8F0)    // Clean light border
 
-// Light Theme Colors (preserved as clean neutral fallback)
-val LightBackground = Color(0xFFF8FAFC)
-val LightSurface = Color(0xFFFFFFFF)
-val LightCard = Color(0xFFFFFFFF)
-val LightCardVariant = Color(0xFFF1F5F9)
+// Light Theme Colors
+val LightBackground = Color(0xFFF8FAFC)     // Crisp neutral background
+val LightSurface = Color(0xFFFFFFFF)        // Pure clean white
+val LightCard = Color(0xFFFFFFFF)           // White card
+val LightCardVariant = Color(0xFFF1F5F9)    // Soft slate variant
+val LightBorder = Color(0xFFE2E8F0)
 
 // High-Energy Accents
 val TealPrimary = Color(0xFF00F5D4)         // Glowing Cyan / Neon Teal
-val TealDark = Color(0xFF00BFA6)            // Rich Teal
+val TealDark = Color(0xFF0D9488)            // Rich Teal
 val TealLight = Color(0xFF70FFF0)           // Pale Neon Teal
 val TealGlow = Color(0x2600F5D4)            // 15% Teal glow for indicators
-val PurpleAccent = Color(0xFF8B5CF6)        // Electric violet
+val PurpleAccent = Color(0xFF6366F1)        // Indigo / Electric violet
 val BlueAccent = Color(0xFF3B82F6)          // Vivid blue
 val AmberWarning = Color(0xFFF59E0B)        // Amber alert
 
@@ -37,8 +38,8 @@ val ExpenseGlow = Color(0x26FF4757)         // Crimson glow
 val TextPrimaryDark = Color(0xFFF8FAFC)     // High-contrast off-white
 val TextSecondaryDark = Color(0xFF94A3B8)   // Muted slate gray
 val TextTertiaryDark = Color(0xFF64748B)    // Dim slate
-val TextPrimaryLight = Color(0xFF0F172A)
-val TextSecondaryLight = Color(0xFF64748B)
+val TextPrimaryLight = Color(0xFF0F172A)    // Deep slate black
+val TextSecondaryLight = Color(0xFF64748B)  // Muted slate gray
 
 // Category Colors — vibrant neon-tinted palette for donut charts & chips
 val CategoryColors = listOf(

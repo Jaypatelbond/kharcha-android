@@ -452,7 +452,7 @@ fun ExpenseItem(expense: SplitExpense) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF131B2C)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -548,7 +548,7 @@ fun BalanceItem(
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF131B2C)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

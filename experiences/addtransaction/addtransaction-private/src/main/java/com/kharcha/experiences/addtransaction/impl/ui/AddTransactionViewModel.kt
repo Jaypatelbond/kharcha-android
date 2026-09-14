@@ -8,6 +8,7 @@ import com.kharcha.core.model.PaymentMode
 import com.kharcha.core.model.Transaction
 import com.kharcha.core.model.TransactionType
 import com.kharcha.core.domain.repository.CategoryRepository
+import com.kharcha.core.domain.repository.CollectionRepository
 import com.kharcha.core.domain.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,8 @@ data class AddTransactionUiState(
     val selectedPaymentMode: PaymentMode = PaymentMode.UPI,
     val note: String = "",
     val date: Long = System.currentTimeMillis(),
+    val selectedCollection: String = "Home Expenses",
+    val availableCollections: List<String> = emptyList(),
     val isEditing: Boolean = false,
     val editingTransactionId: Long = 0,
     val isSaved: Boolean = false,
@@ -40,6 +43,7 @@ data class AddTransactionUiState(
 class AddTransactionViewModel @Inject constructor(
     private val repository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
+    private val collectionRepository: CollectionRepository,
     private val analyticsManager: com.kharcha.core.data.analytics.AnalyticsManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -60,6 +64,11 @@ class AddTransactionViewModel @Inject constructor(
         if (id != null && id > 0) {
             loadTransaction(id)
         }
+        viewModelScope.launch {
+            repository.getAllCollections().collect { cols ->
+                _uiState.update { it.copy(availableCollections = cols) }
+            }
+        }
     }
 
     private fun loadTransaction(id: Long) {
@@ -72,6 +81,7 @@ class AddTransactionViewModel @Inject constructor(
                     selectedPaymentMode = txn.paymentMode,
                     note = txn.note,
                     date = txn.date,
+                    selectedCollection = txn.collection,
                     isEditing = true,
                     editingTransactionId = txn.id
                 )
@@ -104,6 +114,20 @@ class AddTransactionViewModel @Inject constructor(
         _uiState.update { it.copy(date = date) }
     }
 
+    fun onCollectionSelect(collection: String) {
+        _uiState.update { it.copy(selectedCollection = collection) }
+    }
+
+    fun createAndSelectCollection(name: String) {
+        viewModelScope.launch {
+            val trimmed = name.trim()
+            if (trimmed.isNotBlank()) {
+                collectionRepository.addCollection(trimmed)
+                _uiState.update { it.copy(selectedCollection = trimmed) }
+            }
+        }
+    }
+
     fun save() {
         val state = _uiState.value
         val amount = state.amount.toDoubleOrNull()
@@ -125,7 +149,8 @@ class AddTransactionViewModel @Inject constructor(
                 category = state.selectedCategory,
                 paymentMode = state.selectedPaymentMode,
                 note = state.note,
-                date = state.date
+                date = state.date,
+                collection = state.selectedCollection
             )
             if (state.isEditing) {
                 repository.updateTransaction(transaction)

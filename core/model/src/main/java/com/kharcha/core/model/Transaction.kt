@@ -12,5 +12,6 @@ data class Transaction(
     val paymentMode: PaymentMode,
     val note: String = "",
     val date: Long,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val collection: String = "Home Expenses"
 )

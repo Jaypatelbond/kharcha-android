@@ -7,13 +7,14 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
     primary = TealPrimary,
-    onPrimary = DarkBackground,
+    onPrimary = Color(0xFF090D16),
     primaryContainer = TealDark,
     secondary = PurpleAccent,
     background = DarkBackground,
@@ -29,7 +30,7 @@ private val DarkColorScheme = darkColorScheme(
 
 private val LightColorScheme = lightColorScheme(
     primary = TealDark,
-    onPrimary = LightBackground,
+    onPrimary = Color.White,
     primaryContainer = TealLight,
     secondary = PurpleAccent,
     background = LightBackground,
@@ -39,15 +40,15 @@ private val LightColorScheme = lightColorScheme(
     onSurface = TextPrimaryLight,
     onSurfaceVariant = TextSecondaryLight,
     error = ExpenseRedDark,
-    outline = GlassBorderLight,
+    outline = LightBorder,
     outlineVariant = LightCardVariant
 )
 
 @Suppress("DEPRECATION")
 @Composable
 fun KharchaTheme(
-    darkTheme: Boolean = true, // Default to Dark Theme for Sleek Dark Modern experience
-    dynamicColor: Boolean = false, // Keep Kharcha's signature aesthetic on all devices
+    darkTheme: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

@@ -26,7 +26,7 @@ import com.kharcha.tracker.presentation.screens.stats.StatsScreen
 object Routes {
     const val DASHBOARD = "dashboard"
     const val STATS = "stats"
-    const val HISTORY = "history"
+    const val HISTORY = "all_transactions"
     const val SETTINGS = "settings"
     const val ADD_TRANSACTION = "add_transaction"
     const val EDIT_TRANSACTION = "add_transaction/{id}"
@@ -80,6 +80,13 @@ fun NavGraph(
             navController = navController,
             onNavigateToEditTransaction = { id -> navController.navigate(Routes.editTransaction(id)) }
         )
+
+        // Alias route so navigation to "history" never crashes
+        composable("history") {
+            navController.navigate(historyFeatureApi.route) {
+                popUpTo("history") { inclusive = true }
+            }
+        }
 
         dashboardFeatureApi.registerGraph(
             navGraphBuilder = this,

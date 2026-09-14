@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
@@ -55,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -76,6 +79,7 @@ fun AddTransactionScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     var showDatePicker by remember { mutableStateOf(false) }
+    var showAddCollectionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isSaved) {
         if (state.isSaved) onBack()
@@ -176,7 +180,7 @@ fun AddTransactionScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = TealPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 shape = RoundedCornerShape(16.dp)
@@ -232,6 +236,76 @@ fun AddTransactionScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Collection section
+            Text(
+                text = "Collection",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val defaultCollections = listOf(
+                "Home Expenses",
+                "Sissy Expenses",
+                "Bike",
+                "Car",
+                "Home Renovation",
+                "Personal & MISC",
+                "Legal & Lawyer",
+                "Lend & Borrow",
+                "Investments"
+            )
+            val availableCols = remember(state.availableCollections) {
+                val extras = state.availableCollections.filter { it !in defaultCollections && it.isNotBlank() }
+                defaultCollections + extras
+            }
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                availableCols.forEach { colName ->
+                    val isSelected = state.selectedCollection.equals(colName, ignoreCase = true)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { viewModel.onCollectionSelect(colName) },
+                        label = { Text(colName, style = MaterialTheme.typography.labelMedium) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF6366F1),
+                            selectedLabelColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                }
+
+                // "+ New Book" Chip
+                FilterChip(
+                    selected = false,
+                    onClick = { showAddCollectionDialog = true },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                "New Book",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Payment mode
             Text(
                 text = "Payment Mode",
@@ -272,7 +346,7 @@ fun AddTransactionScreen(
                 Icon(
                     Icons.Rounded.CalendarToday,
                     contentDescription = "Date",
-                    tint = TealPrimary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -292,7 +366,7 @@ fun AddTransactionScreen(
                 label = { Text("Note (optional)") },
                 maxLines = 2,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = TealPrimary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
                 ),
                 shape = RoundedCornerShape(12.dp)
             )
@@ -306,7 +380,7 @@ fun AddTransactionScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = TealPrimary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
             ) {
                 Text(
                     text = if (state.isEditing) "Update" else "Save",
@@ -317,6 +391,46 @@ fun AddTransactionScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+
+    if (showAddCollectionDialog) {
+        var newColName by remember { mutableStateOf("") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAddCollectionDialog = false },
+            title = { Text("New Expense Book", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = newColName,
+                    onValueChange = { newColName = it },
+                    label = { Text("Collection Name") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newColName.isNotBlank()) {
+                            viewModel.createAndSelectCollection(newColName)
+                            showAddCollectionDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("Create & Select")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddCollectionDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Date picker dialog

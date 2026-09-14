@@ -64,4 +64,10 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override fun getTotalBalance(): Flow<Double> =
         dao.getTotalBalance()
+
+    override fun getAllCollections(): Flow<List<String>> =
+        dao.getAllCollections()
+
+    override fun getTransactionsByCollection(collection: String): Flow<List<Transaction>> =
+        dao.getTransactionsByCollection(collection).map { entities -> entities.map { it.toDomain() } }
 }

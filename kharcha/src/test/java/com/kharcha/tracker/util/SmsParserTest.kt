@@ -1,5 +1,6 @@
 package com.kharcha.core.common.util
 
+import com.kharcha.core.data.util.SmsParser
 import com.kharcha.core.model.PaymentMode
 import com.kharcha.core.model.TransactionType
 import org.junit.Assert.assertEquals

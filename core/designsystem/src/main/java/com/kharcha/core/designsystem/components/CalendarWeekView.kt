@@ -1,7 +1,6 @@
 package com.kharcha.core.designsystem.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,7 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.kharcha.core.designsystem.theme.DarkCard
 import com.kharcha.core.designsystem.theme.TealPrimary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -61,8 +58,8 @@ fun CalendarWeekView(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF101726)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33475569)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -78,7 +75,7 @@ fun CalendarWeekView(
                     onClick = { currentWeekStart = currentWeekStart.minusWeeks(1) },
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color(0xFF162032), RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
@@ -100,7 +97,7 @@ fun CalendarWeekView(
                     onClick = { currentWeekStart = currentWeekStart.plusWeeks(1) },
                     modifier = Modifier
                         .size(36.dp)
-                        .background(Color(0xFF162032), RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
@@ -130,16 +127,18 @@ fun CalendarWeekView(
                             .clip(RoundedCornerShape(14.dp))
                             .clickable { onDateSelected(date) }
                             .background(
-                                if (isSelected) TealPrimary
-                                else if (isToday) Color(0xFF1E293B)
-                                else Color.Transparent
+                                when {
+                                    isSelected -> MaterialTheme.colorScheme.primary
+                                    isToday -> MaterialTheme.colorScheme.surfaceVariant
+                                    else -> Color.Transparent
+                                }
                             )
                             .padding(vertical = 10.dp, horizontal = 8.dp)
                     ) {
                         Text(
                             text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2).uppercase(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isSelected) Color(0xFF090D16) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
 
@@ -149,7 +148,7 @@ fun CalendarWeekView(
                             text = date.dayOfMonth.toString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) Color(0xFF090D16) else MaterialTheme.colorScheme.onSurface
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))

@@ -83,4 +83,17 @@ interface TransactionDao {
         FROM transactions
     """)
     fun getTotalBalance(): Flow<Double>
+
+    @Query("SELECT DISTINCT collection FROM transactions WHERE collection IS NOT NULL AND collection != '' ORDER BY collection ASC")
+    fun getAllCollections(): Flow<List<String>>
+
+    @Query("UPDATE transactions SET collection = :newName WHERE collection = :oldName")
+    suspend fun updateCollectionName(oldName: String, newName: String)
+
+    @Query("UPDATE transactions SET collection = 'Home Expenses' WHERE collection = :oldName")
+    suspend fun reassignTransactionsToDefaultCollection(oldName: String)
+
+    @androidx.room.Transaction
+    @Query("SELECT * FROM transactions WHERE collection = :collection ORDER BY date DESC")
+    fun getTransactionsByCollection(collection: String): Flow<List<TransactionWithCategory>>
 }

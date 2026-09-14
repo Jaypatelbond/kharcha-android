@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.kharcha.core.model.Transaction
 import com.kharcha.core.model.TransactionType
 import com.kharcha.core.domain.repository.TransactionRepository
+import com.kharcha.core.domain.repository.CollectionRepository
 import com.kharcha.core.datastore.KharchaPreferences
+import com.kharcha.core.common.util.SharedFilter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
@@ -21,9 +24,9 @@ import java.util.Locale
 import javax.inject.Inject
 
 enum class HistoryDateMode(val label: String) {
+    ALL_TIME("All Time"),
     MONTHLY("Monthly"),
-    DATE_RANGE("Date Range"),
-    ALL_TIME("All Time")
+    DATE_RANGE("Date Range")
 }
 
 data class HistoryUiState(
@@ -31,13 +34,16 @@ data class HistoryUiState(
     val dateFilteredTransactions: List<Transaction> = emptyList(),
     val searchQuery: String = "",
     val selectedTypeFilter: TransactionType? = null,
-    val selectedDateMode: HistoryDateMode = HistoryDateMode.MONTHLY,
+    val selectedDateMode: HistoryDateMode = HistoryDateMode.ALL_TIME, // Default ALL_TIME so all entries are visible!
     val selectedYearMonth: YearMonth = YearMonth.now(),
     val selectedMonthLabel: String = "",
     val customStartDate: Long? = null,
     val customEndDate: Long? = null,
     val totalExpense: Double = 0.0,
     val totalIncome: Double = 0.0,
+    val selectedCollection: String? = null,
+    val availableCollections: List<String> = emptyList(),
+    val collectionCounts: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = true
 )
 
@@ -58,6 +64,9 @@ class HistoryViewModel @Inject constructor(
     val isAdFree: StateFlow<Boolean> = _isAdFree.asStateFlow()
 
     init {
+        val preselected = SharedFilter.preselectedCollection
+        SharedFilter.preselectedCollection = null
+
         viewModelScope.launch {
             kharchaPreferences.adFreeExpiry.collect { expiry ->
                 _isAdFree.value = System.currentTimeMillis() < (expiry ?: 0L)
@@ -65,14 +74,21 @@ class HistoryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             repository.getAllTransactions().collect { transactions ->
+                val counts = transactions
+                    .groupBy { it.collection.ifBlank { "Home Expenses" } }
+                    .mapValues { it.value.size }
+                val cols = counts.keys.toList().sorted()
+
                 _uiState.update { state ->
+                    val initialCol = preselected ?: state.selectedCollection
                     val filtered = applyDateAndSearchFilters(
                         transactions = transactions,
                         query = state.searchQuery,
                         dateMode = state.selectedDateMode,
                         yearMonth = state.selectedYearMonth,
                         customStart = state.customStartDate,
-                        customEnd = state.customEndDate
+                        customEnd = state.customEndDate,
+                        selectedCollection = initialCol
                     )
                     val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
                     val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -81,6 +97,9 @@ class HistoryViewModel @Inject constructor(
                         dateFilteredTransactions = filtered,
                         totalExpense = expense,
                         totalIncome = income,
+                        selectedCollection = initialCol,
+                        availableCollections = cols,
+                        collectionCounts = counts,
                         isLoading = false
                     )
                 }
@@ -96,7 +115,8 @@ class HistoryViewModel @Inject constructor(
                 dateMode = state.selectedDateMode,
                 yearMonth = state.selectedYearMonth,
                 customStart = state.customStartDate,
-                customEnd = state.customEndDate
+                customEnd = state.customEndDate,
+                selectedCollection = state.selectedCollection
             )
             val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -117,7 +137,8 @@ class HistoryViewModel @Inject constructor(
                 dateMode = mode,
                 yearMonth = state.selectedYearMonth,
                 customStart = state.customStartDate,
-                customEnd = state.customEndDate
+                customEnd = state.customEndDate,
+                selectedCollection = state.selectedCollection
             )
             val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -140,7 +161,8 @@ class HistoryViewModel @Inject constructor(
                 dateMode = HistoryDateMode.MONTHLY,
                 yearMonth = prev,
                 customStart = state.customStartDate,
-                customEnd = state.customEndDate
+                customEnd = state.customEndDate,
+                selectedCollection = state.selectedCollection
             )
             val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -165,7 +187,8 @@ class HistoryViewModel @Inject constructor(
                 dateMode = HistoryDateMode.MONTHLY,
                 yearMonth = next,
                 customStart = state.customStartDate,
-                customEnd = state.customEndDate
+                customEnd = state.customEndDate,
+                selectedCollection = state.selectedCollection
             )
             val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -188,7 +211,8 @@ class HistoryViewModel @Inject constructor(
                 dateMode = HistoryDateMode.DATE_RANGE,
                 yearMonth = state.selectedYearMonth,
                 customStart = startMillis,
-                customEnd = endMillis
+                customEnd = endMillis,
+                selectedCollection = state.selectedCollection
             )
             val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
@@ -209,10 +233,56 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
+    fun onSelectCollection(collection: String?) {
+        _uiState.update { state ->
+            val targetCollection = if (collection == "All" || collection == "All Collections" || collection == "All Books") null else collection
+
+            // When a collection is selected, if current mode is MONTHLY and that month has 0 entries for this collection,
+            // automatically switch to ALL_TIME so all entries are immediately shown!
+            val newMode = if (targetCollection != null) {
+                if (state.selectedDateMode == HistoryDateMode.MONTHLY) {
+                    val hasInMonth = state.transactions.any {
+                        val colName = it.collection.ifBlank { "Home Expenses" }
+                        colName.equals(targetCollection, ignoreCase = true) && isInYearMonth(it.date, state.selectedYearMonth)
+                    }
+                    if (!hasInMonth) HistoryDateMode.ALL_TIME else state.selectedDateMode
+                } else {
+                    state.selectedDateMode
+                }
+            } else {
+                state.selectedDateMode
+            }
+
+            val filtered = applyDateAndSearchFilters(
+                transactions = state.transactions,
+                query = state.searchQuery,
+                dateMode = newMode,
+                yearMonth = state.selectedYearMonth,
+                customStart = state.customStartDate,
+                customEnd = state.customEndDate,
+                selectedCollection = targetCollection
+            )
+            val expense = filtered.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+            val income = filtered.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            state.copy(
+                selectedCollection = targetCollection,
+                selectedDateMode = newMode,
+                dateFilteredTransactions = filtered,
+                totalExpense = expense,
+                totalIncome = income
+            )
+        }
+    }
+
     fun deleteTransaction(transaction: Transaction) {
         viewModelScope.launch {
             repository.deleteTransaction(transaction)
         }
+    }
+
+    private fun isInYearMonth(epochMillis: Long, ym: YearMonth): Boolean {
+        val date = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+        return date.year == ym.year && date.month == ym.month
     }
 
     private fun applyDateAndSearchFilters(
@@ -221,23 +291,34 @@ class HistoryViewModel @Inject constructor(
         dateMode: HistoryDateMode,
         yearMonth: YearMonth,
         customStart: Long?,
-        customEnd: Long?
+        customEnd: Long?,
+        selectedCollection: String? = null
     ): List<Transaction> {
         var result = transactions
+
+        // 0. Collection Filter (handles blank collections as "Home Expenses")
+        if (!selectedCollection.isNullOrBlank() && selectedCollection != "All" && selectedCollection != "All Collections" && selectedCollection != "All Books") {
+            result = result.filter {
+                val colName = it.collection.ifBlank { "Home Expenses" }
+                colName.equals(selectedCollection, ignoreCase = true)
+            }
+        }
 
         // 1. Date Filter
         when (dateMode) {
             HistoryDateMode.MONTHLY -> {
-                val startOfMonth = yearMonth.atDay(1)
-                    .atStartOfDay(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
-                val endOfMonth = yearMonth.atEndOfMonth()
-                    .atTime(LocalTime.MAX)
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant()
-                    .toEpochMilli()
-                result = result.filter { it.date in startOfMonth..endOfMonth }
+                runCatching {
+                    val startOfMonth = yearMonth.atDay(1)
+                        .atStartOfDay(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                    val endOfMonth = yearMonth.atEndOfMonth()
+                        .atTime(LocalTime.MAX)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli()
+                    result = result.filter { it.date in startOfMonth..endOfMonth }
+                }
             }
             HistoryDateMode.DATE_RANGE -> {
                 if (customStart != null && customEnd != null) {
@@ -264,8 +345,10 @@ class HistoryViewModel @Inject constructor(
 
     companion object {
         fun formatYearMonth(ym: YearMonth): String {
-            val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
-            return ym.format(formatter)
+            return runCatching {
+                val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+                ym.format(formatter)
+            }.getOrDefault(ym.toString())
         }
     }
 }

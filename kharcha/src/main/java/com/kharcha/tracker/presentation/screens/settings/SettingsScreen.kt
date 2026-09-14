@@ -16,6 +16,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.FolderSpecial
+import com.kharcha.core.designsystem.components.ManageCollectionsDialog
+import com.kharcha.core.designsystem.components.CollectionItemData
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
@@ -75,6 +78,8 @@ fun SettingsScreen(
     }
 
     var showAdOfferDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showManageCollectionsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val collections by viewModel.collections.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val adManager = androidx.compose.runtime.remember { com.kharcha.core.common.util.AdManager(context) }
     // Preload ad
@@ -141,6 +146,15 @@ fun SettingsScreen(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SettingsItem(
+            icon = Icons.Rounded.FolderSpecial,
+            title = "Manage Collections",
+            subtitle = "Add, edit, or delete expense books & collections",
+            onClick = { showManageCollectionsDialog = true }
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         SettingsItem(
@@ -343,6 +357,21 @@ fun SettingsScreen(
         )
         
         Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    if (showManageCollectionsDialog) {
+        com.kharcha.core.designsystem.components.ManageCollectionsDialog(
+            collections = collections.map {
+                com.kharcha.core.designsystem.components.CollectionItemData(
+                    name = it.name,
+                    isDefault = it.isDefault
+                )
+            },
+            onDismiss = { showManageCollectionsDialog = false },
+            onCreateCollection = { viewModel.createCollection(it) },
+            onRenameCollection = { old, new -> viewModel.renameCollection(old, new) },
+            onDeleteCollection = { viewModel.deleteCollection(it) }
+        )
     }
 }
 

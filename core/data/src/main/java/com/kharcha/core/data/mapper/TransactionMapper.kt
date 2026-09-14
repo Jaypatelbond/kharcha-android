@@ -12,12 +12,15 @@ import com.kharcha.core.model.TransactionType
 fun TransactionWithCategory.toDomain() = Transaction(
     id = transaction.id,
     amount = transaction.amount,
-    type = TransactionType.valueOf(transaction.type),
+    type = runCatching { TransactionType.valueOf(transaction.type) }.getOrDefault(TransactionType.EXPENSE),
     category = category?.toDomain() ?: getFallbackCategory(transaction.category, transaction.type),
-    paymentMode = PaymentMode.valueOf(transaction.paymentMode),
+    paymentMode = runCatching { PaymentMode.valueOf(transaction.paymentMode) }.getOrElse {
+        PaymentMode.entries.find { it.name.equals(transaction.paymentMode, ignoreCase = true) } ?: PaymentMode.OTHER
+    },
     note = transaction.note,
     date = transaction.date,
-    createdAt = transaction.createdAt
+    createdAt = transaction.createdAt,
+    collection = transaction.collection
 )
 
 fun Transaction.toEntity() = TransactionEntity(
@@ -28,7 +31,8 @@ fun Transaction.toEntity() = TransactionEntity(
     paymentMode = paymentMode.name,
     note = note,
     date = date,
-    createdAt = createdAt
+    createdAt = createdAt,
+    collection = collection
 )
 
 fun SmsTransactionEntity.toDomain() = SmsTransaction(
@@ -36,15 +40,17 @@ fun SmsTransactionEntity.toDomain() = SmsTransaction(
     sender = sender,
     body = body,
     amount = amount,
-    type = TransactionType.valueOf(type),
+    type = runCatching { TransactionType.valueOf(type) }.getOrDefault(TransactionType.EXPENSE),
     detectedCategory = getFallbackCategory(detectedCategory, type),
-    detectedPaymentMode = PaymentMode.valueOf(detectedPaymentMode),
+    detectedPaymentMode = runCatching { PaymentMode.valueOf(detectedPaymentMode) }.getOrElse {
+        PaymentMode.entries.find { it.name.equals(detectedPaymentMode, ignoreCase = true) } ?: PaymentMode.OTHER
+    },
     bankName = bankName,
     accountLast4 = accountLast4,
     refNumber = refNumber,
     balance = balance,
     timestamp = timestamp,
-    status = SmsTransactionStatus.valueOf(status),
+    status = runCatching { SmsTransactionStatus.valueOf(status) }.getOrDefault(SmsTransactionStatus.PENDING),
     createdAt = createdAt
 )
 

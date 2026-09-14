@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -110,10 +112,14 @@ fun HistoryScreen(
             transaction = showOptionsFor!!,
             onDismiss = { showOptionsFor = null },
             onEdit = {
-                onNavigateToEditTransaction(showOptionsFor!!.id)
+                val id = showOptionsFor!!.id
+                showOptionsFor = null
+                onNavigateToEditTransaction(id)
             },
             onDelete = {
-                showDeleteDialog = showOptionsFor
+                val tx = showOptionsFor
+                showOptionsFor = null
+                showDeleteDialog = tx
             }
         )
     }
@@ -196,6 +202,7 @@ fun HistoryScreen(
                 text = "Transaction History",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
 
@@ -209,17 +216,89 @@ fun HistoryScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp),
                 placeholder = { Text("Search transactions...") },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "Search") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = TealPrimary
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 )
             )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Collection Filter Chips with Counts
+            val allCollections = remember(uiState.availableCollections, uiState.collectionCounts) {
+                val defaults = listOf(
+                    "All Collections",
+                    "Home Expenses",
+                    "Personal & MISC",
+                    "Bike",
+                    "Sissy Expenses",
+                    "Home Renovation",
+                    "Car",
+                    "Legal & Lawyer",
+                    "Lend & Borrow",
+                    "Investments"
+                )
+                val dynamic = uiState.availableCollections.filter { it !in defaults && it.isNotBlank() }
+                defaults + dynamic
+            }
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(allCollections) { collectionName ->
+                    val isSelected = if (collectionName == "All Collections") {
+                        uiState.selectedCollection == null
+                    } else {
+                        uiState.selectedCollection.equals(collectionName, ignoreCase = true)
+                    }
+
+                    val count = if (collectionName == "All Collections") {
+                        uiState.transactions.size
+                    } else {
+                        uiState.collectionCounts[collectionName] ?: 0
+                    }
+
+                    val label = if (collectionName == "All Collections") {
+                        "All ($count)"
+                    } else {
+                        "$collectionName ($count)"
+                    }
+
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            viewModel.onSelectCollection(if (collectionName == "All Collections") null else collectionName)
+                        },
+                        label = {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                            selectedLabelColor = Color.White,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = if (isSelected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline,
+                            enabled = true,
+                            selected = isSelected
+                        )
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Date Mode Chips: [Monthly | Date Range | All Time]
+            // Date Mode Chips: [All Time | Monthly | Date Range]
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
@@ -236,11 +315,24 @@ fun HistoryScreen(
                                 showDateRangePicker = true
                             }
                         },
-                        label = { Text(mode.label) },
+                        label = {
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
                         shape = RoundedCornerShape(20.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = TealPrimary,
-                            selectedLabelColor = Color.White
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            enabled = true,
+                            selected = isSelected
                         )
                     )
                 }
@@ -250,6 +342,21 @@ fun HistoryScreen(
 
             // Date Selection Detail Row / Card
             when (uiState.selectedDateMode) {
+                HistoryDateMode.ALL_TIME -> {
+                    val filterDesc = if (uiState.selectedCollection != null) {
+                        "Showing all ${uiState.dateFilteredTransactions.size} entries for ${uiState.selectedCollection}"
+                    } else {
+                        "Showing all ${uiState.dateFilteredTransactions.size} transactions across books"
+                    }
+                    Text(
+                        text = filterDesc,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+                    )
+                }
+
                 HistoryDateMode.MONTHLY -> {
                     Row(
                         modifier = Modifier
@@ -261,7 +368,8 @@ fun HistoryScreen(
                         IconButton(onClick = { viewModel.onPreviousMonth() }) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = "Previous Month"
+                                contentDescription = "Previous Month",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -275,24 +383,20 @@ fun HistoryScreen(
                         IconButton(onClick = { viewModel.onNextMonth() }) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.ArrowForward,
-                                contentDescription = "Next Month"
+                                contentDescription = "Next Month",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                 }
 
                 HistoryDateMode.DATE_RANGE -> {
-                    val rangeText = if (uiState.customStartDate != null && uiState.customEndDate != null) {
-                        "${DateUtils.formatShortDate(uiState.customStartDate!!)} – ${DateUtils.formatDate(uiState.customEndDate!!)}"
-                    } else {
-                        "Tap to select date range"
-                    }
-
                     Card(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 4.dp)
@@ -301,42 +405,29 @@ fun HistoryScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Rounded.DateRange,
-                                    contentDescription = null,
-                                    tint = TealPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = rangeText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                            val rangeText = if (uiState.customStartDate != null && uiState.customEndDate != null) {
+                                "${DateUtils.formatShortDate(uiState.customStartDate!!)} - ${DateUtils.formatShortDate(uiState.customEndDate!!)}"
+                            } else {
+                                "Tap to select date range"
                             }
                             Text(
-                                text = "Change",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TealPrimary,
-                                fontWeight = FontWeight.Bold
+                                text = rangeText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Icon(
+                                Icons.Rounded.DateRange,
+                                contentDescription = null,
+                                tint = TealPrimary,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
-                }
-
-                HistoryDateMode.ALL_TIME -> {
-                    // Subtle indicator
-                    Text(
-                        text = "Showing all transactions",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
-                    )
                 }
             }
 
@@ -346,7 +437,8 @@ fun HistoryScreen(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 4.dp)
@@ -408,13 +500,13 @@ fun HistoryScreen(
             androidx.compose.material3.TabRow(
                 selectedTabIndex = pagerState.currentPage,
                 containerColor = Color.Transparent,
-                contentColor = TealPrimary,
+                contentColor = MaterialTheme.colorScheme.primary,
                 divider = {},
                 indicator = { tabPositions ->
                     if (pagerState.currentPage < tabPositions.size) {
                         SecondaryIndicator(
                             Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                            color = TealPrimary
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -426,8 +518,8 @@ fun HistoryScreen(
                         onClick = {
                             scope.launch { pagerState.animateScrollToPage(index) }
                         },
-                        text = { Text(title) },
-                        selectedContentColor = TealPrimary,
+                        text = { Text(title, fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal) },
+                        selectedContentColor = MaterialTheme.colorScheme.primary,
                         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -454,6 +546,9 @@ fun HistoryScreen(
                     transactions = localFiltered,
                     isLoading = uiState.isLoading,
                     searchQuery = uiState.searchQuery,
+                    selectedCollection = uiState.selectedCollection,
+                    collectionCount = uiState.collectionCounts[uiState.selectedCollection] ?: 0,
+                    onViewAllTime = { viewModel.setDateMode(HistoryDateMode.ALL_TIME) },
                     onTransactionClick = onNavigateToEditTransaction,
                     onDelete = { viewModel.deleteTransaction(it) },
                     onLongClick = { showOptionsFor = it }
@@ -468,6 +563,9 @@ fun HistoryListContent(
     transactions: List<Transaction>,
     isLoading: Boolean,
     searchQuery: String,
+    selectedCollection: String?,
+    collectionCount: Int,
+    onViewAllTime: () -> Unit,
     onTransactionClick: (Long) -> Unit,
     onDelete: (Transaction) -> Unit,
     onLongClick: (Transaction) -> Unit
@@ -489,10 +587,32 @@ fun HistoryListContent(
     }
 
     if (transactions.isEmpty()) {
-        EmptyState(
-            title = if (searchQuery.isNotBlank()) "No results found" else "No transactions in this period",
-            subtitle = if (searchQuery.isNotBlank()) "Try a different search" else "Tap + to add a transaction"
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            EmptyState(
+                title = if (searchQuery.isNotBlank()) "No results found" else "No entries in this period",
+                subtitle = if (selectedCollection != null && collectionCount > 0) {
+                    "$selectedCollection has $collectionCount entries in other months."
+                } else {
+                    "Try selecting 'All Time' or another date range"
+                }
+            )
+            if (selectedCollection != null && collectionCount > 0) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onViewAllTime,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("View All $collectionCount Entries (All Time)", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
         return
     }
 
@@ -509,6 +629,7 @@ fun HistoryListContent(
                 Text(
                     text = dateLabel,
                     style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                 )
